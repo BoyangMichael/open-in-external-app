@@ -5,6 +5,8 @@ import vscode from 'vscode';
 import { localize } from 'vscode-nls-i18n';
 
 import getExtensionConfig from './config';
+import { ApplicationLauncher } from './launchers/applicationLauncher';
+import { LocalResolver } from './resolvers/localResolver';
 import { logger } from './utils/logger';
 import { open } from './utils/open';
 import { getActiveFileUri } from './utils/uri';
@@ -34,6 +36,9 @@ function getConfigItemById(configuration: ExtensionConfigItem[], configItemId: s
 function getSharedConfigItem(configuration: ExtensionConfigItem[]) {
     return configuration.find((item) => item.extensionName === '__ALL__');
 }
+
+const resolver = new LocalResolver();
+const launcher = new ApplicationLauncher();
 
 async function openWithConfigItem(
     filePath: string,
@@ -102,7 +107,8 @@ export default async function openInExternalApp(
     uri ??= vscode.window.activeTextEditor?.document.uri ?? (await getActiveFileUri());
     if (!uri) return;
 
-    const { fsPath: filePath } = uri;
+    const resolvedFile = await resolver.resolve(uri);
+    const filePath = resolvedFile.localPath;
 
     // when there is configuration map to it's extension, use [open](https://github.com/sindresorhus/open)
     // except for configured appConfig.isElectronApp option
@@ -130,7 +136,7 @@ export default async function openInExternalApp(
     } else if (!sharedConfigItem) {
         // Only use system default when there's no matched config and no shared config
         logger.info('no matched config and no shared config');
-        await open(filePath);
+        await launcher.launch(resolvedFile);
     } else {
         logger.info('no matched config, but found shared config');
     }

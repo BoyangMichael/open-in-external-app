@@ -134,3 +134,34 @@ architecture.
   - Identify extension entry points.
   - Design the `FileResolver` interface.
   - Create the first implementation milestone.
+
+---
+
+# Session 002
+
+**Date:** 2026-07-24
+
+## Objective
+
+Introduce the first URI-aware abstraction layer while preserving existing local-file behavior.
+
+## Summary
+
+- Added a small `FileResolver` abstraction with a `LocalResolver` implementation.
+- Added an `ApplicationLauncher` wrapper that preserves the current launch flow for local files.
+- Wired the main extension entry point through the new abstractions so the command path now resolves a URI to a local path before launching.
+- Added a regression test covering local resolution and launcher target extraction.
+- Verified the project compiles successfully with the test build.
+
+## Links
+
+- [src/resolvers/baseResolver.ts](src/resolvers/baseResolver.ts)
+- [src/resolvers/localResolver.ts](src/resolvers/localResolver.ts)
+- [src/launchers/applicationLauncher.ts](src/launchers/applicationLauncher.ts)
+- [src/openInExternalApp.ts](src/openInExternalApp.ts)
+- [test/resolverLauncher.test.ts](test/resolverLauncher.test.ts)
+
+## Open Questions / TODOs
+
+- Implement a remote resolver for Remote-SSH and other URI providers.
+- Decide how cached remote files should be invalidated and cleaned up.
