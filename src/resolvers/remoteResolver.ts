@@ -1,6 +1,6 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
 
 import type { Uri } from 'vscode';
 import vscode from 'vscode';
@@ -40,11 +40,9 @@ export class RemoteResolver implements FileResolver {
 
         await this.ensureCacheDir(cacheDir);
 
-        const cacheFileName = `${uri.authority.replaceAll(/[^\w.-]/g, '_')}${uri.path.replaceAll(
-            /[^\w.-]/g,
-            '_',
-        )}`;
-        const cachePath = join(cacheDir, cacheFileName);
+        const cacheFileName = basename(uri.path) || 'remote-file';
+        const safeAuthority = uri.authority.replaceAll(/[^\w.-]/g, '_');
+        const cachePath = join(cacheDir, `${safeAuthority}-${cacheFileName}`);
 
         if (!(await pathExists(cachePath))) {
             const bytes = await vscode.workspace.fs.readFile(uri);
@@ -55,7 +53,7 @@ export class RemoteResolver implements FileResolver {
             localPath: cachePath,
             originalUri: uri,
             providerType,
-            cacheInfo: { cachePath },
+            cacheInfo: { cachePath, cached: true },
         };
     }
 }

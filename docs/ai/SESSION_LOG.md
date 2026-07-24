@@ -195,3 +195,31 @@ Implement the first remote-aware resolver path for URI-based files and add initi
 
 - Add more robust remote file download handling and cache invalidation.
 - Extend support to additional providers beyond the initial Remote-SSH-style detection.
+
+---
+
+# Session 004
+
+**Date:** 2026-07-24
+
+## Objective
+
+Refine the remote resolver implementation and keep the AI documentation aligned with the latest code changes.
+
+## Summary
+
+- Improved the remote cache path construction to use a deterministic, file-name-based cache target.
+- Added regression coverage for repeated resolution of the same remote URI.
+- Kept the AI documentation in sync with the implementation progress so future contributors can follow the architecture evolution.
+- Established a working convention: whenever code changes are made, the corresponding AI documentation should be updated in the same pass.
+
+## Links
+
+- [src/resolvers/remoteResolver.ts](src/resolvers/remoteResolver.ts)
+- [test/resolverLauncher.test.ts](test/resolverLauncher.test.ts)
+- [docs/ai/SESSION_LOG.md](docs/ai/SESSION_LOG.md)
+
+## Open Questions / TODOs
+
+- Add cache invalidation and cleanup heuristics for downloaded remote files.
+- Extend the resolver layer to support additional URI providers beyond the initial Remote-SSH-style path.
