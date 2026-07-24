@@ -45,4 +45,13 @@ describe('#resolverLauncher', () => {
         assert.strictEqual(first.localPath, second.localPath);
         assert.strictEqual(firstCachePath, secondCachePath);
     });
+
+    it('should keep unsupported uri schemes as unsupported', async () => {
+        const resolver = new RemoteResolver();
+        const uri = Uri.parse('untitled:example.txt');
+
+        const resolved = await resolver.resolve(uri);
+
+        assert.strictEqual(resolved.providerType, 'unsupported');
+    });
 });

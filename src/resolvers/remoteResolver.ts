@@ -34,6 +34,14 @@ export class RemoteResolver implements FileResolver {
             return this.localResolver.resolve(uri);
         }
 
+        if (uri.scheme !== 'vscode-remote' && uri.scheme !== 'file') {
+            return {
+                localPath: uri.fsPath,
+                originalUri: uri,
+                providerType: 'unsupported',
+            };
+        }
+
         const cacheDir = vscode.workspace
             .getConfiguration()
             .get<string>('openInExternalApp.cacheDir', DEFAULT_CACHE_DIR);
