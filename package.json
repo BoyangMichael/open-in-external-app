@@ -125,6 +125,10 @@
                     "type": "boolean",
                     "default": true
                 },
+                "openInExternalApp.cacheDir": {
+                    "type": "string",
+                    "default": ""
+                },
                 "openInExternalApp.openMapper": {
                     "type": "array",
                     "description": "%cfg.openInExternalApp.openMapper%",

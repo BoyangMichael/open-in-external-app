@@ -5,6 +5,7 @@ import { Uri } from 'vscode';
 import { ApplicationLauncher } from '../src/launchers/applicationLauncher';
 import type { ResolvedFile } from '../src/resolvers/baseResolver';
 import { LocalResolver } from '../src/resolvers/localResolver';
+import { getRemoteProviderType } from '../src/resolvers/remoteResolver';
 
 describe('#resolverLauncher', () => {
     it('should resolve a local file uri to a local path', async () => {
@@ -24,5 +25,11 @@ describe('#resolverLauncher', () => {
         } as ResolvedFile;
 
         assert.strictEqual(launcher.getLaunchTarget(resolved), '/tmp/example.txt');
+    });
+
+    it('should detect remote ssh uris', () => {
+        const uri = Uri.parse('vscode-remote://ssh-remote+example/home/user/demo.txt');
+
+        assert.strictEqual(getRemoteProviderType(uri), 'ssh');
     });
 });

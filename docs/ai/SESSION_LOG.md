@@ -165,3 +165,33 @@ Introduce the first URI-aware abstraction layer while preserving existing local-
 
 - Implement a remote resolver for Remote-SSH and other URI providers.
 - Decide how cached remote files should be invalidated and cleaned up.
+
+---
+
+# Session 003
+
+**Date:** 2026-07-24
+
+## Objective
+
+Implement the first remote-aware resolver path for URI-based files and add initial cache configuration.
+
+## Summary
+
+- Added a `RemoteResolver` that detects Remote-SSH-style URIs and resolves them to a local cache path.
+- Added a configurable `openInExternalApp.cacheDir` setting so cached remote files can be stored in a user-defined location.
+- Switched the main extension flow to use the remote-aware resolver while preserving local behavior.
+- Added a regression test for remote provider detection.
+- Verified the project compiles successfully with the test build.
+
+## Links
+
+- [src/resolvers/remoteResolver.ts](src/resolvers/remoteResolver.ts)
+- [src/openInExternalApp.ts](src/openInExternalApp.ts)
+- [package.json](package.json)
+- [test/resolverLauncher.test.ts](test/resolverLauncher.test.ts)
+
+## Open Questions / TODOs
+
+- Add more robust remote file download handling and cache invalidation.
+- Extend support to additional providers beyond the initial Remote-SSH-style detection.

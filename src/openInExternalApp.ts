@@ -6,7 +6,7 @@ import { localize } from 'vscode-nls-i18n';
 
 import getExtensionConfig from './config';
 import { ApplicationLauncher } from './launchers/applicationLauncher';
-import { LocalResolver } from './resolvers/localResolver';
+import { RemoteResolver } from './resolvers/remoteResolver';
 import { logger } from './utils/logger';
 import { open } from './utils/open';
 import { getActiveFileUri } from './utils/uri';
@@ -37,7 +37,7 @@ function getSharedConfigItem(configuration: ExtensionConfigItem[]) {
     return configuration.find((item) => item.extensionName === '__ALL__');
 }
 
-const resolver = new LocalResolver();
+const resolver = new RemoteResolver();
 const launcher = new ApplicationLauncher();
 
 async function openWithConfigItem(
