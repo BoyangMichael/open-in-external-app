@@ -21,14 +21,17 @@ maintainable and realistic to propose upstream.
 ## Coding Guidelines
 
 1. **Keep commits small and focused**
+
    - Implement one well-defined change per commit where possible.
    - Avoid large, multi-purpose commits that are hard to review.
 
 2. **Preserve upstream coding style**
+
    - Follow the existing patterns for TypeScript/JavaScript, configuration, and tests.
    - When in doubt, look at similar code in the upstream repository and imitate it.
 
 3. **Document public APIs and configuration**
+
    - When adding or changing interfaces (`FileResolver`, `ApplicationLauncher`, settings, commands),
      update the relevant documentation:
      - Code comments for public interfaces.
@@ -37,11 +40,13 @@ maintainable and realistic to propose upstream.
      - User-facing docs/settings descriptions where applicable.
 
 4. **Avoid introducing breaking changes**
+
    - Preserve existing behavior for local files by default.
    - If a breaking change is truly necessary, document it clearly and consider
      migration strategies.
 
 5. **Consider cross-platform behavior**
+
    - Verify that new features make sense on Windows, macOS, and Linux.
    - Keep platform-specific logic isolated and well-tested.
 
@@ -57,18 +62,22 @@ maintainable and realistic to propose upstream.
 Before writing code, answer these questions:
 
 1. **What is the abstraction?**
+
    - Identify the minimal interface or component that captures the feature.
    - Favor adding a new resolver or launcher implementation over ad-hoc logic.
 
 2. **Can we minimize changes to existing code?**
+
    - Plug into existing extension entry points instead of rewriting them.
    - Keep wiring changes small and incremental.
 
 3. **Can the feature be implemented without special-case branches?**
+
    - Prefer generic mechanisms over `if provider == "ssh"` scattered in multiple places.
    - Use configuration and polymorphic resolver implementations instead.
 
 4. **Will it work for future URI providers?**
+
    - Design resolvers so that adding WSL, Dev Containers, Codespaces, etc. is straightforward.
    - Avoid assumptions tied only to Remote-SSH.
 
@@ -89,22 +98,45 @@ Before writing code, answer these questions:
 
 ---
 
+## Mandatory Documentation Rule
+
+Every non-trivial change must update the docs/ai set in the same pass.
+
+- If you change code, configuration, behavior, architecture, or workflow, update the relevant docs/ai file immediately.
+- Do not leave documentation updates for a future cleanup task.
+- For implementation work, this normally means:
+  - adding or updating a session entry in `SESSION_LOG.md`
+  - updating `ARCHITECTURE.md` or `DECISIONS.md` when structure or design choices change
+  - updating `CONTRIBUTING_AI.md` or `AGENTS.md` when the working conventions change
+
+## Mandatory Commit Workflow Rule
+
+After each meaningful update, ask the user whether they want it committed.
+
+- Present the decision with an explicit accept/reject choice.
+- If the user accepts, commit and push the change.
+- If the user rejects, do not commit yet; leave the work ready for the next update unless the user explicitly asks otherwise.
+
 ## Workflow for AI-Assisted Changes
 
 1. **Review context**
+
    - Read `PROJECT_CONTEXT.md`, `ARCHITECTURE.md`, and `DECISIONS.md`.
    - Check `ROADMAP.md` to see which milestone your work fits into.
    - Review `SESSION_LOG.md` for recent changes and open questions.
 
 2. **Plan the change**
+
    - Write down a brief plan: what interface or component you will touch and why.
    - Ensure the change aligns with existing design decisions.
 
 3. **Implement incrementally**
+
    - Make the smallest change that delivers value.
    - Keep TypeScript/JavaScript code idiomatic and consistent.
 
 4. **Test and validate**
+
    - Run relevant build/test commands.
    - Validate behavior with both local and Remote-SSH scenarios where possible.
 

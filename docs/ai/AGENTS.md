@@ -31,22 +31,38 @@ Types of contributions include:
 
 ## Collaboration Principles
 
-1. **Leave a trail**  
+1. **Leave a trail**
+
    - When you perform non-trivial work (design, refactor, new feature), add a short entry to `SESSION_LOG.md`.
    - Link to relevant code, pull requests, or design documents when possible.
 
-2. **Minimize disruption**  
+2. **Minimize disruption**
+
    - Avoid large, sweeping changes unless explicitly requested.
    - Prefer incremental improvements that preserve behavior for existing users.
 
-3. **Preserve upstream compatibility**  
+3. **Preserve upstream compatibility**
+
    - Follow upstream coding style and conventions.
    - Avoid breaking changes unless there is a clear migration path.
 
-4. **Respect abstractions**  
+4. **Respect abstractions**
+
    - Keep `FileResolver` focused on URIs, remote handling, and caching.
    - Keep `ApplicationLauncher` focused on launching apps and handling platforms.
    - Do not introduce provider-specific conditionals scattered through unrelated modules.
+
+5. **Keep docs/ai in sync with every meaningful change**
+
+   - This is a non-negotiable rule for every non-trivial implementation, refactor, configuration change, or behavior change.
+   - Update the relevant docs/ai files in the same change set, not as a later cleanup task.
+   - At minimum, add or update the session log and adjust architecture or contributor guidance when the change affects structure, workflow, or decisions.
+
+6. **Ask before committing**
+   - After each meaningful update, pause and ask the user whether they want the change committed.
+   - Present the decision with an explicit accept/reject choice.
+   - If the user accepts, commit and push the change.
+   - If the user rejects, do not commit yet; keep the change staged or unstaged and include it in the next update unless the user asks otherwise.
 
 ---
 
@@ -54,20 +70,23 @@ Types of contributions include:
 
 Before you begin implementing anything:
 
-1. **Read the core docs**  
-   - `PROJECT_CONTEXT.md`  
-   - `ARCHITECTURE.md`  
-   - `DECISIONS.md`  
+1. **Read the core docs**
+
+   - `PROJECT_CONTEXT.md`
+   - `ARCHITECTURE.md`
+   - `DECISIONS.md`
    - `ROADMAP.md`
 
-2. **Check the latest `SESSION_LOG.md`**  
+2. **Check the latest `SESSION_LOG.md`**
+
    - Understand what previous agents or humans did.
    - Identify ongoing work, open questions, and unresolved issues.
 
-3. **Clarify your objective**  
+3. **Clarify your objective**
+
    - Write down a short objective for the session (e.g. "Implement basic LocalResolver and wire it into the command handler.").
 
-4. **Confirm constraints**  
+4. **Confirm constraints**
    - Maintain backward compatibility for local file behavior.
    - Observe cross-platform requirements.
    - Keep changes within the current milestone if possible (see `ROADMAP.md`).
@@ -79,6 +98,7 @@ Before you begin implementing anything:
 At the end of a session:
 
 - Add a concise entry to `SESSION_LOG.md` including:
+
   - Date.
   - Objective.
   - Summary of changes or design decisions.
