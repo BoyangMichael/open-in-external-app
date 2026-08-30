@@ -39,6 +39,24 @@ function getSharedConfigItem(configuration: ExtensionConfigItem[]) {
     return configuration.find((item) => item.extensionName === '__ALL__');
 }
 
+const REMOTE_RESOLVE_TIMEOUT_MS = 30_000;
+
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+    return new Promise<T>((resolve, reject) => {
+        const timer = setTimeout(() => reject(new Error(`timed out after ${ms}ms`)), ms);
+        promise.then(
+            (value) => {
+                clearTimeout(timer);
+                resolve(value);
+            },
+            (error) => {
+                clearTimeout(timer);
+                reject(error);
+            },
+        );
+    });
+}
+
 /**
  * Splits an app list down to the ones matching the requested location. Apps without an
  * explicit `location` default to 'local', so existing configs (written before `location`
@@ -170,7 +188,28 @@ export default async function openInExternalApp(
         filePath = uri.path;
         launchPath = uri.path;
     } else {
-        resolvedFile = await resolver.resolve(uri);
+        const remoteProviderType = getRemoteProviderType(uri);
+        if (remoteProviderType && uri.scheme === 'vscode-remote') {
+            // Give visible feedback while downloading a remote file, and fail loudly
+            // instead of hanging forever if workspace.fs never resolves/rejects -
+            // both silent behaviors were reported by a real user as "nothing happens".
+            try {
+                resolvedFile = await vscode.window.withProgress(
+                    {
+                        location: vscode.ProgressLocation.Notification,
+                        title: localize('msg.progress.downloadingRemoteFile', uri.fsPath),
+                        cancellable: false,
+                    },
+                    () => withTimeout(resolver.resolve(uri!), REMOTE_RESOLVE_TIMEOUT_MS),
+                );
+            } catch (error) {
+                logger.info(`resolving remote file failed or timed out: ${error}`);
+                vscode.window.showErrorMessage(localize('msg.error.resolveTimedOut', uri.fsPath));
+                return;
+            }
+        } else {
+            resolvedFile = await resolver.resolve(uri);
+        }
         filePath = resolvedFile.localPath;
         launchPath = filePath;
     }
