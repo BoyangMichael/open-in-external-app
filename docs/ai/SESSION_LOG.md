@@ -410,3 +410,50 @@ utility.
 - CI now runs on `develop` pushes — next session should check whether the run actually passed
   (this is the first real confirmation opportunity for all the resolver/variable tests added in
   Sessions 005–007, since they can't run in this sandbox).
+
+---
+
+# Session 008
+
+**Date:** 2026-08-30
+
+## Objective
+
+Resolve the `ApplicationLauncher`/`utils/open.ts` test-coverage question left open from Session
+007, then continue down the roadmap toward a first working version.
+
+## Summary
+
+- Resolved the coverage question without adding a mocking library: `open()`'s `shellCommand` path
+  (variable substitution + `shellEnv` merge feeding a real `exec` call) is deterministic and
+  side-effect-free enough to run for real — `test/open.test.ts` uses `echo ... > tempfile` instead
+  of stubbing `child_process.exec`. Mirrors the resolver tests' "real I/O over mocking" approach
+  (`DECISIONS.md` §10). POSIX-only (skipped on `win32`): `cmd.exe` quoting differs enough from `sh`
+  that a portable command string wasn't worth chasing. The `openCommand`/`isElectronApp`/default
+  paths (real OS "open with default app") remain deliberately untested — no safe way to assert
+  that in CI without a mocking library, and that's a bigger decision left for if/when a real bug
+  in those paths actually calls for it.
+- Marked Milestone 6 (Quality and Reliability) ✅ Completed in `ROADMAP.md`.
+- Moved to Milestone 7 (Marketplace Release): ran `pnpm package` to verify the extension actually
+  builds a `.vsix` — it does. Along the way found `.vscodeignore` wasn't excluding `docs/ai/` or
+  `CLAUDE.md`, so every internal AI-collaboration doc was being bundled into the shipped package
+  (25 files → 17 after the fix). Fixed and re-verified.
+- Milestone 7's remaining gap: "users can install and use the extension in Remote-SSH and local
+  scenarios" still isn't verified end-to-end — needs a real VS Code environment, which this
+  sandbox can't provide (same Electron-launch limitation as `pnpm test`).
+
+## Links
+
+- [test/open.test.ts](test/open.test.ts)
+- [.vscodeignore](.vscodeignore)
+- [docs/ai/ROADMAP.md](docs/ai/ROADMAP.md)
+- [docs/ai/DECISIONS.md](docs/ai/DECISIONS.md)
+
+## Open Questions / TODOs
+
+- Milestone 7 acceptance criterion "install and use in Remote-SSH and local scenarios" needs a
+  real environment to verify — the user mentioned wanting a walkthrough of `pnpm test` once a
+  first working version exists; the same walkthrough would cover installing the packaged `.vsix`.
+- GitHub Codespaces authority prefix still unconfirmed (carried over from Session 007).
+- Milestone 8 (Upstream Collaboration) and the rest of Milestone 5 (remote application execution,
+  SSH host overrides) remain untouched — next candidates once Milestone 7 closes.
