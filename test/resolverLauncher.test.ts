@@ -9,6 +9,7 @@ import { ApplicationLauncher } from '../src/launchers/applicationLauncher';
 import type { ResolvedFile } from '../src/resolvers/baseResolver';
 import { LocalResolver } from '../src/resolvers/localResolver';
 import {
+    getConfiguredCacheDir,
     getRemoteProviderType,
     pruneStaleCache,
     RemoteResolver,
@@ -226,6 +227,47 @@ describe('#resolverLauncher', () => {
                 ),
                 true,
             );
+        });
+    });
+
+    describe('#getConfiguredCacheDir', () => {
+        afterEach(async () => {
+            await workspace
+                .getConfiguration()
+                .update('openInExternalApp.cacheDir', undefined, ConfigurationTarget.Global);
+        });
+
+        it('should fall back to a default cache dir when the setting is unset', async () => {
+            await workspace
+                .getConfiguration()
+                .update('openInExternalApp.cacheDir', undefined, ConfigurationTarget.Global);
+
+            assert.ok(getConfiguredCacheDir().length > 0);
+        });
+
+        it('should fall back to the default cache dir when the setting is an empty string', async () => {
+            // Regression test: package.json used to declare a "" default for this setting,
+            // which VS Code treats as *the* configured value - so workspace.getConfiguration()
+            // .get()'s own JS-level fallback never applied, and RemoteResolver.resolve() tried
+            // to mkdir('') and threw ENOENT uncaught. The manifest default is gone now, but this
+            // guards against a user explicitly setting the value to "" too.
+            await workspace
+                .getConfiguration()
+                .update('openInExternalApp.cacheDir', '', ConfigurationTarget.Global);
+
+            assert.notStrictEqual(getConfiguredCacheDir(), '');
+        });
+
+        it('should use an explicitly configured cache dir as-is', async () => {
+            await workspace
+                .getConfiguration()
+                .update(
+                    'openInExternalApp.cacheDir',
+                    '/tmp/custom-cache-dir',
+                    ConfigurationTarget.Global,
+                );
+
+            assert.strictEqual(getConfiguredCacheDir(), '/tmp/custom-cache-dir');
         });
     });
 });
