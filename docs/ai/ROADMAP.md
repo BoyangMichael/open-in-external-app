@@ -126,7 +126,7 @@ test suite. See `DECISIONS.md` §6 for the caching decision this refines.
 
 ---
 
-## Milestone 5 — Configuration and Provider Support
+## Milestone 5 — Configuration and Provider Support 🚧 In Progress
 
 **Goals:**
 
@@ -136,18 +136,27 @@ test suite. See `DECISIONS.md` §6 for the caching decision this refines.
 **Tasks:**
 
 - Support configuration of:
-  - local applications
-  - (future) remote applications
-  - cache directory
-  - SSH host overrides and provider-specific options
-- Design configuration schema to be extensible for WSL, Dev Containers,
-  Codespaces, and others.
+  - local applications ✅
+  - (future) remote applications — not started
+  - cache directory ✅ (`openInExternalApp.cacheDir`, `openInExternalApp.cacheMaxAgeDays`)
+  - SSH host overrides and provider-specific options — not started
+- Design configuration schema to be extensible for WSL, Dev Containers, Codespaces, and others.
+  - WSL ✅ already worked via the generic `RemoteResolver` path (no provider-specific code needed
+    beyond authority detection).
+  - Dev Containers ✅ fixed: `getRemoteProviderType` now detects `dev-container+`/
+    `attached-container+` authorities (previously dead-code detection meant these silently fell
+    through to `LocalResolver`). See `DECISIONS.md` §9.
+  - Codespaces — still undetected; the authority prefix wasn't confirmed against an authoritative
+    source, so `DECISIONS.md` §9 deliberately left it unguessed rather than risk a wrong prefix
+    check. Needs verification (ideally against a real Codespaces session) before adding.
+  - Decided against per-provider resolver classes (`ContainerResolver`, `WSLResolver`, etc.) — see
+    `DECISIONS.md` §9 for why the existing generic `RemoteResolver` covers this without them.
 
 **Acceptance criteria:**
 
-- Users can configure applications and cache behavior via settings.
-- The configuration model leaves room for additional providers without major
-  rewrites.
+- Users can configure applications and cache behavior via settings. ✅
+- The configuration model leaves room for additional providers without major rewrites. ✅ (adding
+  a provider is a one-line addition to `getRemoteProviderType`, confirmed by the Dev Container fix)
 
 ---
 

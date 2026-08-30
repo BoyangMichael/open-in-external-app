@@ -183,6 +183,33 @@ pruning proves insufficient in practice.
 - Pruning is silent (log-only) by design — there's no user-facing notification when entries are
   evicted, since it's routine maintenance, not an error condition.
 
+## 9. Dev Container Detection Fix, and No Per-Provider Resolver Classes
+
+**Decision:** `getRemoteProviderType` detects Dev Containers via the `dev-container+`/
+`attached-container+` authority prefixes, replacing a third branch that checked whether
+`uri.authority` starts with the literal string `"vscode-remote"`. Verified against VS Code's
+actual URI convention: `vscode-remote` is the URI **scheme** shared by every remote provider
+(SSH, WSL, containers, Codespaces); the **authority** carries the provider-specific id
+(`ssh-remote+…`, `wsl+…`, `dev-container+…`, `attached-container+…`). Authorities never start with
+the scheme string, so that branch could never match a real URI — Dev Container files were silently
+falling through to `LocalResolver` (treating a container-internal path as a host path).
+
+**Rationale for fixing now:** found while reviewing Milestone 5 ("provider extensibility"); this
+isn't a hypothetical gap, it's dead code hiding a real detection failure for an already-listed
+target provider.
+
+**Related decision — no `ContainerResolver`/`WSLResolver` classes:** `ARCHITECTURE.md`'s original
+sketch proposed a resolver subclass per provider (`RemoteSSHResolver`, `WSLResolver`,
+`ContainerResolver`, `CodespacesResolver`). In practice, `ssh`/`wsl`/`container` all resolve
+identically once detected — same `workspace.fs.stat`/`readFile`/cache/prune flow — so a single
+`RemoteResolver` plus a provider-detection function is sufficient and avoids the "special case per
+provider" pattern §2 warns against. Only add a distinct resolver class if a provider someday needs
+genuinely different resolution logic (not just a different authority prefix).
+
+**Still open:** GitHub Codespaces' authority prefix wasn't confirmed via available sources (unlike
+`dev-container+`/`attached-container+`, which are). Not guessing at it — `getRemoteProviderType`
+still returns `undefined` for Codespaces URIs until the real prefix is confirmed.
+
 ---
 
 ## 7. Remote vs Local Application Execution (Future Direction)
