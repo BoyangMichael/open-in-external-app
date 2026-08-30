@@ -63,7 +63,7 @@ document and should be updated as milestones are completed or refined.
 
 ---
 
-## Milestone 3b — Cache Correctness & Resilience 🚧 In Progress
+## Milestone 3b — Cache Correctness & Resilience ✅ Completed
 
 **Why:** Follow-up gaps identified while reviewing Milestone 3: the resolver caches by
 `authority + filename` only, so it never notices when the remote file itself has changed, and it
@@ -89,19 +89,21 @@ test suite. See `DECISIONS.md` §6 for the caching decision this refines.
    `vscode.window.show*Message` instead of propagating as an unhandled rejection; if a cached copy
    already exists, fall back to it (with a warning) instead of failing the whole "Open in External
    App" action.
-3. **Cache eviction policy (open design question, not yet implemented):** decide whether cleanup
-   is time-based, size-based, or a manual command, and implement it. Revisit
-   `ARCHITECTURE.md` → "Open Questions" and `DECISIONS.md` §6 when this is decided.
+3. **Cache eviction policy (decided — time-based, opportunistic):** `maybePruneRemoteCache` runs
+   once on extension activation and deletes cached files (and their sidecar metadata) whose mtime
+   is older than the configurable `openInExternalApp.cacheMaxAgeDays` (default 7 days; `0`
+   disables it). See `DECISIONS.md` §6c for the rationale and what's still open (size-based
+   eviction, a manual "clear cache" command).
 
 **Acceptance criteria:**
 
 - Reopening a remote file that changed on the remote side opens the updated content, not a stale
-  cached copy.
-- Reopening an unchanged remote file does not re-download it.
+  cached copy. ✅
+- Reopening an unchanged remote file does not re-download it. ✅
 - A remote stat/download failure with an existing cache shows a warning and still opens the
-  (possibly outdated) cached copy, rather than failing silently or crashing the command.
-- Tests cover: cache reuse when unchanged, refresh when changed, and fallback-to-stale-cache on
-  error.
+  (possibly outdated) cached copy, rather than failing silently or crashing the command. ✅
+- Tests cover: cache reuse when unchanged, refresh when changed, fallback-to-stale-cache on error,
+  and cache pruning behavior. ✅
 
 ---
 

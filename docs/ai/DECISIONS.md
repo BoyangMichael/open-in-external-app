@@ -161,6 +161,28 @@ command fails visibly instead of as an unhandled rejection.
 local copy of; but silently swallowing the error would hide staleness from the user, hence the
 warning message.
 
+### 6c. Cache eviction policy (decided — Milestone 3b)
+
+**Decision:** Time-based, opportunistic pruning. On extension activation, `maybePruneRemoteCache`
+scans the configured cache directory and deletes any cached file (plus its `.meta.json` sidecar)
+whose local mtime is older than `openInExternalApp.cacheMaxAgeDays` (default 7 days; `0` disables
+pruning). It is not a background timer — it only runs once per activation, fire-and-forget, and
+failures on individual entries are logged and skipped rather than aborting the whole pass.
+
+**Rationale:** A per-activation sweep is the simplest option that still bounds disk growth without
+adding timer/lifecycle management (start/stop on `deactivate`) or a new command surface. Using the
+cached file's own mtime as the "last used" signal avoids needing a separate access-tracking
+mechanism — every cache hit that redownloads (6a) naturally resets it, and untouched entries age
+out. Size-based eviction and a manual "clear cache" command remain open for later if time-based
+pruning proves insufficient in practice.
+
+**Implications:**
+
+- `RemoteResolver.resolve` and pruning now share cache-dir resolution via
+  `getConfiguredCacheDir()`.
+- Pruning is silent (log-only) by design — there's no user-facing notification when entries are
+  evicted, since it's routine maintenance, not an error condition.
+
 ---
 
 ## 7. Remote vs Local Application Execution (Future Direction)
