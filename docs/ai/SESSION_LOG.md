@@ -703,3 +703,63 @@ file. Diagnose from Output panel logs and ship a mitigation.
   `workspace.fs.readFile` directly instead of `stat` first behave differently; is there a simpler
   repro (e.g. a fresh minimal test extension) that could narrow this down without needing the
   user's exact environment.
+
+---
+
+# Session 013
+
+**Date:** 2026-08-31
+
+## Objective
+
+Session 012's mitigation immediately paid off: the timeout fired right away instead of after 30s,
+and its error message revealed the actual root cause directly. Fix it for real.
+
+## Summary
+
+- User tested the mitigation from Session 012: progress notification appeared, but the timeout
+  fired **immediately** (not after 30s) with `Error: ENOENT: no such file or directory, mkdir ''`.
+  Confirmed separately that plain VS Code file access (no extension) is fine and fast — ruling out
+  any general connection/filesystem slowness theory from Session 012.
+- Root cause: `package.json` declared `"openInExternalApp.cacheDir": { "default": "" }`. VS Code
+  treats a manifest-declared default as the setting's actual value — `workspace.getConfiguration()
+.get(key, jsFallback)`'s `jsFallback` argument only kicks in when there's no default anywhere.
+  So `getConfiguredCacheDir()` always returned `""` for any user who hadn't explicitly set the
+  setting, `DEFAULT_CACHE_DIR` was dead code since Session 003, and
+  `RemoteResolver.ensureCacheDir()` threw an uncaught `mkdir('')` — not a `workspace.fs` hang at
+  all. This was masked in every prior test because every test explicitly set `cacheDir`. Also
+  almost certainly explains the _original_ "remote does nothing" report from before Session 011's
+  fix, for the same reason (that path called `resolve()` unconditionally back then too).
+- **Corrected the record rather than silently overwriting it**: `DECISIONS.md` §15 (the "workspace
+  .fs.stat never settles" diagnosis) was wrong. Added an explicit "resolved, this was wrong"
+  addendum to §15 itself, pointing to new §16 with the real root cause — left the original
+  reasoning visible instead of deleting it, per this doc's own norm of recording decisions and why
+  they were made, even when the decision/diagnosis turns out to be incorrect.
+- Fix: removed `package.json`'s bad `"default": ""` (added a `description` while at it - it never
+  had one), added a defensive `configured || DEFAULT_CACHE_DIR` guard in `getConfiguredCacheDir()`
+  for anyone who explicitly sets `""` themselves, and moved `ensureCacheDir()` inside `resolve()`'s
+  existing try/catch so a future failure there is handled gracefully (stale-cache fallback or a
+  proper error message) instead of escaping uncaught again. Exported `getConfiguredCacheDir` and
+  added three regression tests (unset, empty string, explicit path).
+- Flagged a broader lesson in `DECISIONS.md` §16: a VS Code manifest-declared config default isn't
+  a fallback layered under a code default, it _is_ the value and silently shadows the code-level
+  one - worth scanning other `contributes.configuration` entries for the same footgun (checked
+  `cacheMaxAgeDays`: its manifest default and code fallback both happen to be `7`, so no bug there).
+- Rebuilt and reinstalled the `.vsix` again.
+
+## Links
+
+- [src/resolvers/remoteResolver.ts](src/resolvers/remoteResolver.ts)
+- [package.json](package.json)
+- [package.nls.json](package.nls.json)
+- [test/resolverLauncher.test.ts](test/resolverLauncher.test.ts)
+- [docs/ai/DECISIONS.md](docs/ai/DECISIONS.md)
+- [docs/ai/ROADMAP.md](docs/ai/ROADMAP.md)
+
+## Open Questions / TODOs
+
+- **Awaiting user confirmation** that "Open in Local App" actually works now - this fix is
+  well-diagnosed (the exact error message matched the exact bug) but not yet confirmed fixed in
+  the user's real session.
+- Everything else from Sessions 010-012's open questions not touched by this fix still stands
+  (icon, Codespaces prefix, Marketplace account setup).

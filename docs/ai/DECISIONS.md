@@ -466,6 +466,59 @@ mode visible and bounded instead of silent and infinite.
 - Whether `extensionKind: ["ui"]` (§11) is actually implicated, or coincidental — not established
   either way yet.
 
+**Resolved (2026-08-31) — the "never settles" diagnosis above was wrong; retracting it.** The
+mitigation's own error message revealed the real cause immediately: `Error: ENOENT: no such file
+or directory, mkdir ''`. `RemoteResolver.ensureCacheDir()` was calling `mkdir(cacheDir, {
+recursive: true })` with `cacheDir === ''` — not hanging at all, just throwing synchronously and
+early. It never reached `workspace.fs.stat`. The `extensionKind`/`workspace.fs`-routing
+speculation above was unfounded; no evidence for it ever existed beyond "no log line appeared,"
+which this simpler explanation accounts for just as well. See §16 for the actual root cause and
+fix. Left this entry's incorrect reasoning in place (rather than deleting it) as an honest record
+of the investigation, per this doc's own norm of recording decisions and their rationale — future
+readers should treat everything above this note as superseded.
+
+---
+
+## 16. Root Cause of §15: `cacheDir`'s Manifest Default Was `""`
+
+**Root cause:** `package.json` declared `"openInExternalApp.cacheDir": { "type": "string",
+"default": "" }`. VS Code's configuration system treats a manifest-declared default as _the_
+effective value for that setting — `workspace.getConfiguration().get(key, jsFallback)`'s own
+`jsFallback` argument only applies when the setting has **no** default anywhere, manifest or user.
+Since the manifest declared `""`, `getConfiguredCacheDir()`'s call to `.get('openInExternalApp.
+cacheDir', DEFAULT_CACHE_DIR)` always returned `""` for any user who hadn't explicitly set the
+setting themselves — meaning `DEFAULT_CACHE_DIR` (the `os.tmpdir()`-based fallback) was silently
+dead code the entire time, for every user, since this setting was introduced in Session 003. This
+went undetected across every test written in Sessions 005-012 because every single test explicitly
+set `openInExternalApp.cacheDir` to an isolated temp path before running — none of them exercised
+the setting's real, unset default. `ensureCacheDir(cacheDir)` then called `mkdir('', { recursive:
+true })`, which throws `ENOENT` synchronously — and critically, this call happened **before** the
+`try`/`catch` that wraps the rest of `resolve()`, so the exception propagated fully uncaught
+through `resolver.resolve()`, `openInExternalApp()`, and the command handler. This is the same
+root cause behind the _original_ "Open in Remote App does nothing" report from before §14's fix
+too (that path also called `resolver.resolve()` unconditionally at the time) — not a
+`workspace.fs` problem there either.
+
+**Fix:**
+
+- Removed the manifest's `"default": ""` from `openInExternalApp.cacheDir` in `package.json`
+  (added a proper `description` while at it — it never had one). Now genuinely unset when the user
+  hasn't configured it, so `.get()`'s `jsFallback` argument actually applies.
+- `getConfiguredCacheDir()` additionally guards `configured || DEFAULT_CACHE_DIR` — defensive
+  redundancy in case a user explicitly sets the value to `""` themselves.
+- Moved the `ensureCacheDir()` call inside `resolve()`'s existing `try`/`catch`, so a future
+  failure here (e.g. permission denied creating the directory) is handled the same way as a
+  stat/download failure — falls back to a stale cache if one exists, otherwise shows a proper
+  error message and rethrows — instead of escaping as an unhandled exception again.
+- Added regression tests (`getConfiguredCacheDir` with the setting unset, set to `""`, and set to
+  a real path) so this specific class of bug can't silently reappear.
+
+**Broader lesson for this project:** a _default value declared in a VS Code manifest_ is not a
+"just in case" fallback layered under a code-level default — it _is_ the value, and it silently
+shadows any `.get(key, fallback)` argument for every user who never touches the setting. Worth
+scanning other `contributes.configuration` entries in `package.json` for the same footgun
+(`cacheMaxAgeDays` looks fine — its manifest default and code fallback agree at `7`).
+
 ---
 
 ## How to Use This Document

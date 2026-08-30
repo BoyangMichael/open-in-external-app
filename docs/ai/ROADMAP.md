@@ -107,13 +107,20 @@ test suite. See `DECISIONS.md` §6 for the caching decision this refines.
 
 ---
 
-## Milestone 4 — Application Launch for Resolved Files ⚠️ Regression found in real testing
+## Milestone 4 — Application Launch for Resolved Files ✅ Bug found and fixed in real testing
 
 **Update (2026-08-31):** real Remote-SSH testing found that "remote file → local app" — this
-milestone's core acceptance criterion — hangs silently (`vscode.workspace.fs.stat` never
-resolves/rejects for at least one real connection). A mitigation shipped (progress notification +
-30s timeout, so the failure is visible and bounded instead of silent and infinite), but the root
-cause is not yet found. See `DECISIONS.md` §15.
+milestone's core acceptance criterion — failed with an uncaught `ENOENT: mkdir ''`. Root cause:
+`openInExternalApp.cacheDir`'s manifest-declared `"default": ""` in `package.json` silently
+shadowed the code-level fallback default for every user who never explicitly set the setting —
+true since Session 003, masked by every test explicitly overriding the setting. Fixed: removed the
+bad manifest default, added a defensive `|| DEFAULT_CACHE_DIR` guard, moved cache-dir creation
+inside the existing error handling, added regression tests. A progress-notification-and-timeout
+mitigation from the same investigation (visible feedback + bounded failure instead of an
+apparent-hang) remains in place regardless. See `DECISIONS.md` §15 (superseded diagnosis, kept for
+the record) and §16 (actual root cause). **Awaiting user confirmation that this actually fixes
+"Open in Local App" in their real session** before calling this milestone re-closed with
+confidence.
 
 **Goals:**
 
