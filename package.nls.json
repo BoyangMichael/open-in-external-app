@@ -4,6 +4,8 @@
 
     "msg.error.configFormat": "Your extension configuration format isn't correct!",
     "msg.error.sameTitleMultipleApp": "Not allowed to set two applications using the same title, please correct your configuration first!",
+    "msg.error.remoteFileUnavailable": "Failed to access remote file: {0}",
+    "msg.warning.remoteFileStale": "Could not refresh remote file, opening a possibly outdated cached copy: {0}",
     "msg.quickPick.selectApp.placeholder": "Select application to open the file...",
     "msg.quickPick.selectApps.placeholder": "Select multiple applications to open the file...",
 

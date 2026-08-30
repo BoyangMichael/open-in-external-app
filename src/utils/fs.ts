@@ -7,3 +7,11 @@ export function pathExists(path: string) {
         .then(() => true)
         .catch(() => false);
 }
+
+export async function readJson<T>(path: string): Promise<T | undefined> {
+    try {
+        return JSON.parse(await fs.readFile(path, 'utf8')) as T;
+    } catch {
+        return undefined;
+    }
+}
