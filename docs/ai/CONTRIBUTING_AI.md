@@ -117,8 +117,8 @@ Commit autonomously and often — no need to ask before committing.
   into one big commit waiting for a "big enough" milestone.
 - Split unrelated concerns (docs, roadmap/decisions updates, implementation, tests) into separate
   commits so history stays easy to review and bisect.
-- Pushing to the remote is still a separate, explicit decision — confirm with the user before
-  pushing unless they've said otherwise.
+- Push once a good number of commits has accumulated, or a milestone/roadmap item is completed —
+  no need to ask first. Don't push after every single commit; batch a coherent chunk of work.
 
 ## Workflow for AI-Assisted Changes
 

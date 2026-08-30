@@ -64,8 +64,8 @@ Types of contributions include:
    - Split unrelated concerns into separate commits (e.g. a docs-only change, a roadmap update, an
      implementation change, and its tests can each be their own commit) so history stays easy to
      review and bisect.
-   - Pushing to the remote is a separate decision from committing locally: confirm with the user
-     before pushing, since it affects shared/visible state, unless they've said otherwise.
+   - Push once a good number of commits has accumulated, or a milestone/roadmap item is completed
+     — no need to ask first. Don't push after every single commit; batch a coherent chunk of work.
 
 ---
 
