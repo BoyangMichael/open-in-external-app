@@ -1,11 +1,23 @@
 import assert from 'node:assert';
+import fs from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
 
-import { Uri } from 'vscode';
+import { ConfigurationTarget, Uri, workspace } from 'vscode';
 
 import { ApplicationLauncher } from '../src/launchers/applicationLauncher';
 import type { ResolvedFile } from '../src/resolvers/baseResolver';
 import { LocalResolver } from '../src/resolvers/localResolver';
 import { getRemoteProviderType, RemoteResolver } from '../src/resolvers/remoteResolver';
+
+/**
+ * Builds a URI that RemoteResolver treats as a remote ("ssh") file (via a forged
+ * ssh-remote+ authority) while keeping scheme 'file', so workspace.fs operations hit
+ * the real local filesystem instead of requiring an actual remote connection.
+ */
+function fakeRemoteUri(localPath: string): Uri {
+    return Uri.file(localPath).with({ authority: 'ssh-remote+test-host' });
+}
 
 describe('#resolverLauncher', () => {
     it('should resolve a local file uri to a local path', async () => {
@@ -53,5 +65,81 @@ describe('#resolverLauncher', () => {
         const resolved = await resolver.resolve(uri);
 
         assert.strictEqual(resolved.providerType, 'unsupported');
+    });
+
+    describe('cache staleness', () => {
+        let workDir: string;
+
+        beforeEach(async () => {
+            workDir = await fs.mkdtemp(path.join(os.tmpdir(), 'oiea-remote-resolver-'));
+            // isolate each test's cache dir so cache entries (keyed only on authority + basename,
+            // not full path) can't leak between tests or across repeated test runs
+            await workspace
+                .getConfiguration()
+                .update(
+                    'openInExternalApp.cacheDir',
+                    path.join(workDir, 'cache'),
+                    ConfigurationTarget.Global,
+                );
+        });
+
+        afterEach(async () => {
+            await workspace
+                .getConfiguration()
+                .update('openInExternalApp.cacheDir', undefined, ConfigurationTarget.Global);
+            await fs.rm(workDir, { recursive: true, force: true });
+        });
+
+        it('should not redownload when the remote file is unchanged', async () => {
+            const sourcePath = path.join(workDir, 'source.txt');
+            await fs.writeFile(sourcePath, 'v1');
+            const uri = fakeRemoteUri(sourcePath);
+
+            const resolver = new RemoteResolver();
+            const first = await resolver.resolve(uri);
+            assert.strictEqual((first.cacheInfo as any).refreshed, true);
+
+            const second = await resolver.resolve(uri);
+            assert.strictEqual(second.localPath, first.localPath);
+            assert.strictEqual((second.cacheInfo as any).refreshed, false);
+            assert.strictEqual((second.cacheInfo as any).stale, false);
+        });
+
+        it('should redownload when the remote file changes', async () => {
+            const sourcePath = path.join(workDir, 'source.txt');
+            await fs.writeFile(sourcePath, 'v1');
+            const uri = fakeRemoteUri(sourcePath);
+
+            const resolver = new RemoteResolver();
+            await resolver.resolve(uri);
+
+            // bump mtime forward so the resolver observes a change regardless of fs timestamp resolution
+            const future = new Date(Date.now() + 5000);
+            await fs.writeFile(sourcePath, 'v2');
+            await fs.utimes(sourcePath, future, future);
+
+            const second = await resolver.resolve(uri);
+            assert.strictEqual((second.cacheInfo as any).refreshed, true);
+            const content = await fs.readFile(second.localPath, 'utf8');
+            assert.strictEqual(content, 'v2');
+        });
+
+        it('should fall back to a stale cached copy when the remote file becomes unavailable', async () => {
+            const sourcePath = path.join(workDir, 'source.txt');
+            await fs.writeFile(sourcePath, 'v1');
+            const uri = fakeRemoteUri(sourcePath);
+
+            const resolver = new RemoteResolver();
+            const first = await resolver.resolve(uri);
+
+            // simulate the remote becoming unreachable while a cached copy still exists
+            await fs.rm(sourcePath);
+
+            const second = await resolver.resolve(uri);
+            assert.strictEqual(second.localPath, first.localPath);
+            assert.strictEqual((second.cacheInfo as any).stale, true);
+            const content = await fs.readFile(second.localPath, 'utf8');
+            assert.strictEqual(content, 'v1');
+        });
     });
 });
