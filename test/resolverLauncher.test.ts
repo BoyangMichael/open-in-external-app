@@ -49,6 +49,22 @@ describe('#resolverLauncher', () => {
         assert.strictEqual(getRemoteProviderType(uri), 'ssh');
     });
 
+    it('should detect wsl uris', () => {
+        const uri = Uri.parse('vscode-remote://wsl+ubuntu/home/user/demo.txt');
+
+        assert.strictEqual(getRemoteProviderType(uri), 'wsl');
+    });
+
+    it('should detect dev container and attached container uris', () => {
+        const devContainer = Uri.parse('vscode-remote://dev-container+deadbeef/workspace/demo.txt');
+        const attachedContainer = Uri.parse(
+            'vscode-remote://attached-container+deadbeef/workspace/demo.txt',
+        );
+
+        assert.strictEqual(getRemoteProviderType(devContainer), 'container');
+        assert.strictEqual(getRemoteProviderType(attachedContainer), 'container');
+    });
+
     it('should keep a stable cache path for the same remote uri', async () => {
         const resolver = new RemoteResolver();
         const uri = Uri.parse('vscode-remote://ssh-remote+example/home/user/demo.txt');
