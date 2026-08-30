@@ -340,3 +340,73 @@ close out the last open item from Milestone 3b (cache eviction policy).
 - Next roadmap items are Milestone 5 (config/provider extensibility beyond SSH — WSL/Dev
   Containers/Codespaces resolvers) and Milestone 6 (CI setup, which would also resolve the
   can't-run-tests-here limitation by giving the project an environment where they actually run).
+
+---
+
+# Session 007
+
+**Date:** 2026-08-30
+
+## Objective
+
+Per user direction: push once commits accumulate or a milestone completes (no more asking first,
+mirroring the earlier commit-autonomy change); extend CI to actually run on this branch; continue
+building — closed part of Milestone 5 (provider detection) and added coverage for an untested
+utility.
+
+## Summary
+
+- Updated `AGENTS.md`/`CONTRIBUTING_AI.md`: pushing is now also autonomous ("push after a good
+  batch of commits or a completed milestone"), replacing the earlier "confirm before pushing" line.
+- Extended `.github/workflows/ci.yml` to trigger on `develop` pushes too (previously `main` only)
+  — this is also the only environment that can currently run the Mocha/`@vscode/test-electron`
+  suite, since it fails to launch in this sandbox (Sessions 005/006).
+- **Push friction:** the sandbox's GitHub PAT lacked the `workflow` OAuth scope, so any push
+  touching `.github/workflows/*.yml` was rejected by GitHub itself. This blocked not just that one
+  commit but everything after it in the local history (can't push around a commit in the middle of
+  a linear branch). Attempted to reorder it out via `git rebase --onto`; the sandbox's permission
+  classifier blocked the rebase. Stopped and asked the user rather than working around either
+  restriction — they added the `workflow` scope to the token and pushed manually. Verified after
+  the fact with `git fetch` that local and `origin/develop` are fully in sync.
+- Found and fixed a real bug while reviewing Milestone 5: `getRemoteProviderType`'s third branch
+  checked whether `uri.authority` starts with the literal string `"vscode-remote"` — but that
+  string is the URI _scheme_ shared by every remote provider, never part of the _authority_
+  (verified via web search: authorities are `ssh-remote+…`, `wsl+…`, `dev-container+…`,
+  `attached-container+…`). The branch could never match, so Dev Container files were silently
+  falling through to `LocalResolver`. Replaced it with real `dev-container+`/`attached-container+`
+  detection → `'container'`. Left Codespaces undetected since its authority prefix wasn't
+  confirmed against an authoritative source (`DECISIONS.md` §9).
+- Also documented (§9) why no `ContainerResolver`/`WSLResolver` subclasses were added, even though
+  `ARCHITECTURE.md`'s original sketch proposed them: `ssh`/`wsl`/`container` all resolve identically
+  once detected, so the existing generic `RemoteResolver` + provider-detection function already
+  satisfies Milestone 5's extensibility goal without per-provider classes.
+- Added `test/variable.test.ts`: `utils/variable.ts` (`parseVariables`) had zero coverage despite
+  being non-trivial, bug-prone logic (WSL `fsPathOverride`/`useWindowsPath` handling, `${env:...}`/
+  `${config:...}` substitution). Covered without any mocking, using real `vscode.Uri` objects
+  against the real API in the test host — the same approach as the resolver tests.
+- Committed each concern separately (push-policy docs, CI trigger + roadmap note, provider-fix
+  implementation, provider-fix tests, provider-fix docs, `parseVariables` tests) — 8 commits this
+  session.
+
+## Links
+
+- [src/resolvers/remoteResolver.ts](src/resolvers/remoteResolver.ts)
+- [test/resolverLauncher.test.ts](test/resolverLauncher.test.ts)
+- [test/variable.test.ts](test/variable.test.ts)
+- [.github/workflows/ci.yml](.github/workflows/ci.yml)
+- [docs/ai/AGENTS.md](docs/ai/AGENTS.md)
+- [docs/ai/CONTRIBUTING_AI.md](docs/ai/CONTRIBUTING_AI.md)
+- [docs/ai/ROADMAP.md](docs/ai/ROADMAP.md)
+- [docs/ai/DECISIONS.md](docs/ai/DECISIONS.md)
+
+## Open Questions / TODOs
+
+- GitHub Codespaces' authority prefix is still unconfirmed and therefore still undetected —
+  needs verification against a real Codespaces session before adding.
+- `ApplicationLauncher`/`utils/open.ts` (the actual process-spawning code) still has only thin
+  test coverage (`getLaunchTarget` only) — meaningfully testing it would need mocking the `open`
+  package / `child_process.exec` / `vscode.env.openExternal`, which is a bigger tooling decision
+  (no mocking library in the project yet) better raised with the user than decided unilaterally.
+- CI now runs on `develop` pushes — next session should check whether the run actually passed
+  (this is the first real confirmation opportunity for all the resolver/variable tests added in
+  Sessions 005–007, since they can't run in this sandbox).
