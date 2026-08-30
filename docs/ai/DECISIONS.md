@@ -275,6 +275,35 @@ those paths that tests would have caught.
 
 ---
 
+## 11. `extensionKind: ["ui"]` — Force Local Execution (Bug Fix)
+
+**Decision:** Declare `"extensionKind": ["ui"]` in `package.json`.
+
+**What was found:** the manifest had no `extensionKind` declared. Per VS Code's own docs, an
+extension with no declaration and no purely-UI contribution points is inferred as a **Workspace**
+extension — meaning under Remote-SSH, its extension host runs **on the remote machine**, not the
+user's local machine. That would mean every `child_process.exec`/`open`
+package/`vscode.env.openExternal` call in `utils/open.ts` — the calls that are supposed to launch
+a **local** desktop app — was at risk of actually spawning on the remote host instead, silently
+undermining the entire "download remote file → open with local app" flow that Milestone 3
+implemented. This was found while researching how the new "open with remote app" feature
+(Milestone 5) should work, not from an observed failure report — it needs confirmation in a real
+Remote-SSH session, but the risk was serious enough to fix immediately rather than leave latent.
+
+**Fix:** force the extension host to always run locally (`ui` kind), regardless of workspace type.
+This guarantees local-app launching actually happens on the user's machine.
+
+**Implication for remote-app execution (Milestone 5):** since the extension itself now always runs
+locally, "run this app on the remote machine" cannot be done by just calling `child_process.exec`
+in the extension host (that would exec locally). The intended mechanism is VS Code's `Terminal`
+API: `vscode.window.createTerminal(...)` + `terminal.sendText(command)` — a terminal opened in a
+Remote-SSH workspace executes on the remote host **regardless of which side the requesting
+extension runs on**, which is exactly the cross-boundary primitive this feature needs. This still
+needs to be validated in a real Remote-SSH session before being relied on as the implementation
+approach.
+
+---
+
 ## How to Use This Document
 
 When you make a notable design choice:
