@@ -521,6 +521,40 @@ scanning other `contributes.configuration` entries in `package.json` for the sam
 
 ---
 
+## 17. Default Cache Location: `globalStorageUri`, Not the OS Temp Folder
+
+**User's question (2026-08-31):** after §16's fix, is it actually safe to default into the OS temp
+folder at all — could the cache's own pruning delete files belonging to other apps, and shouldn't
+the extension use its own dedicated subfolder?
+
+**Answer on pruning specifically:** already safe as implemented — `pruneStaleCache(cacheDir, ...)`
+only ever `readdir`s and deletes within the exact `cacheDir` it's given, and that was always a
+dedicated subfolder (`open-in-external-app-cache`) under the temp root, never the temp root
+itself. It could never have touched another app's files.
+
+**Decision (going further anyway):** switched the _default_ cache location from
+`join(os.tmpdir(), 'open-in-external-app-cache')` to
+`join(context.globalStorageUri.fsPath, 'remote-file-cache')` — set once via a new
+`setDefaultCacheDir()` in `activate()`. `context.globalStorageUri` is VS Code's own
+per-extension persistent storage directory: guaranteed exclusive to this extension (stronger than
+"probably exclusive by virtue of an unusual folder name" — the OS temp dir subfolder approach) and
+not subject to whatever ad-hoc cleanup policy the OS/user applies to `/tmp` (which would silently
+undermine caching's whole purpose — a "cache" that gets wiped between sessions isn't saving
+anything). `openInExternalApp.cacheDir` still fully overrides this for anyone who wants a
+different location (e.g. a larger disk); this only changes the _default_ for users who never touch
+the setting.
+
+**On "the settings box doesn't show the actual default path":** this turned out to be a genuine
+VS Code platform limitation, not an oversight — a configuration schema's `"default"` in
+`package.json` is static (baked in at build time), while the real value here is inherently
+per-machine (depends on `context.globalStorageUri`, itself OS- and installation-dependent).
+Hardcoding a plausible-looking static default would reintroduce a variant of §16's exact bug
+(wrong/misleading on other platforms). Chose transparency instead: `RemoteResolver.resolve()` now
+logs `using cache directory: <path>` on every resolve, so the actual resolved path is always
+visible in the Output panel even though Settings UI can't show it.
+
+---
+
 ## How to Use This Document
 
 When you make a notable design choice:

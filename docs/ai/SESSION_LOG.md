@@ -763,3 +763,56 @@ and its error message revealed the actual root cause directly. Fix it for real.
   the user's real session.
 - Everything else from Sessions 010-012's open questions not touched by this fix still stands
   (icon, Codespaces prefix, Marketplace account setup).
+
+---
+
+# Session 014
+
+**Date:** 2026-08-31
+
+## Objective
+
+Follow up on two questions from the user after confirming the cacheDir root cause: (1) they want
+the Settings UI to show the actual default path, not an empty box; (2) is it actually safe to
+default into the OS temp folder, given the pruning feature — should the extension use its own
+subfolder instead?
+
+## Summary
+
+- Confirmed pruning was already safe: `pruneStaleCache` only ever operates within the exact
+  `cacheDir` it's given, which was always a dedicated `open-in-external-app-cache` subfolder, never
+  the temp root itself. No other app's files were ever at risk.
+- Went further anyway per the user's underlying concern: switched the _default_ cache location
+  from the OS temp folder to `context.globalStorageUri` (VS Code's own per-extension persistent
+  storage directory) — genuinely more robust, since OS temp folders can be cleared unpredictably
+  (undermining the whole point of caching), whereas globalStorage is guaranteed exclusive to this
+  extension and persists reliably. `openInExternalApp.cacheDir` still overrides it fully.
+- On "show the default in Settings UI": this turned out to be a real VS Code platform limitation,
+  not something to just fix - a manifest `"default"` is static/build-time, but the real value here
+  is inherently per-machine. Explained this to the user rather than either ignoring the ask or
+  reintroducing a hardcoded-and-wrong-on-other-platforms default (which would have been a milder
+  version of Session 013's exact bug). Compromise: `RemoteResolver.resolve()` now logs
+  `using cache directory: <path>` on every resolve, so the real path is always visible in the
+  Output panel even though Settings UI can't show it.
+- Added `setDefaultCacheDir()` (exported from `remoteResolver.ts`, called once from `activate()`)
+  and a regression test for it. Documented the full reasoning in `DECISIONS.md` §17.
+- **Also wrote first-ever memory files for this project** (`user_domain_and_workflow.md`,
+  `feedback_engineering_values.md`) - captured that the user does computational chemistry over
+  Remote-SSH to an HPC host, tests hands-on with real logs, and has confirmed two durable
+  engineering preferences: keep hot paths lightweight (don't reintroduce overhead once removed),
+  and insist on real diagnostic evidence before re-diagnosing silent failures.
+- Rebuilt and reinstalled the `.vsix` again.
+
+## Links
+
+- [src/resolvers/remoteResolver.ts](src/resolvers/remoteResolver.ts)
+- [src/extension.ts](src/extension.ts)
+- [package.nls.json](package.nls.json)
+- [test/resolverLauncher.test.ts](test/resolverLauncher.test.ts)
+- [docs/ai/DECISIONS.md](docs/ai/DECISIONS.md)
+
+## Open Questions / TODOs
+
+- Still waiting on final confirmation that "Open in Local App" works end to end (carried over from
+  Session 013 - not yet explicitly confirmed by the user).
+- Everything else from Sessions 010-013's open questions not touched here still stands.
