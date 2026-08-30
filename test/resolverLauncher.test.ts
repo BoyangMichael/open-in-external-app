@@ -13,6 +13,7 @@ import {
     getRemoteProviderType,
     pruneStaleCache,
     RemoteResolver,
+    setDefaultCacheDir,
 } from '../src/resolvers/remoteResolver';
 
 /**
@@ -268,6 +269,22 @@ describe('#resolverLauncher', () => {
                 );
 
             assert.strictEqual(getConfiguredCacheDir(), '/tmp/custom-cache-dir');
+        });
+
+        it('should use the value set via setDefaultCacheDir as the fallback', async () => {
+            // Mirrors what activate() does: prefer the extension's dedicated storage
+            // directory over the OS temp folder when the setting is unset.
+            const original = getConfiguredCacheDir();
+            try {
+                setDefaultCacheDir('/tmp/global-storage-cache');
+                await workspace
+                    .getConfiguration()
+                    .update('openInExternalApp.cacheDir', undefined, ConfigurationTarget.Global);
+
+                assert.strictEqual(getConfiguredCacheDir(), '/tmp/global-storage-cache');
+            } finally {
+                setDefaultCacheDir(original);
+            }
         });
     });
 });
