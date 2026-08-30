@@ -54,6 +54,7 @@ Instead:
 **Decision:** Separate the concerns of URI resolution, file transfer, and application launching.
 
 - `FileResolver` handles:
+
   - interpreting VS Code URIs
   - deciding whether a file needs to be downloaded
   - performing downloads and caching
@@ -118,7 +119,8 @@ Open questions:
 
 - Should cache cleanup be time-based, manual, or on-demand?
 - How should concurrent downloads of the same file be handled?
-- How should cache invalidation interact with remote file changes (e.g. updated results)?
+- How should cache invalidation interact with remote file changes (e.g. updated results)? —
+  **resolved below.**
 
 **Implications:**
 
@@ -126,6 +128,38 @@ Open questions:
 - More advanced strategies can be introduced behind configuration once the basic behavior is stable.
 
 Updates on this topic should be reflected here as they are decided.
+
+### 6a. Staleness detection (decided — Milestone 3b)
+
+**Decision:** Before reusing a cached copy, `RemoteResolver` compares the remote file's `mtime`
+(via `workspace.fs.stat`) against the `mtime` recorded when the file was last cached. The recorded
+`mtime` is persisted in a small JSON sidecar next to the cached file (`<cachePath>.meta.json`), so
+freshness checks survive extension reloads rather than relying on in-memory state.
+
+**Rationale:** The original cache key (`authority + filename`) only prevents redundant downloads
+of an _unchanged_ file — it has no way to detect that the remote file was since modified, which
+defeats the purpose of a "remote file resolver" (silently serving outdated content). A stat-based
+mtime check is the cheapest correctness fix that doesn't require hashing file contents or keeping
+a persistent connection.
+
+**Implications:**
+
+- One extra `workspace.fs.stat` round-trip per resolve; acceptable since it's far cheaper than a
+  full re-download and only happens when the "Open in External App" command runs.
+- Cache cleanup/eviction (size- or time-based) remains a separate, still-open question — staleness
+  detection only prevents _serving wrong content_, it does not bound cache growth.
+
+### 6b. Resilience on stat/download failure (decided — Milestone 3b)
+
+**Decision:** If `workspace.fs.stat`/`readFile` fails (e.g. the remote connection drops) and a
+cached copy already exists, `RemoteResolver` logs the failure, shows a
+`vscode.window.showWarningMessage`, and returns the stale cached copy rather than failing the
+command. If no cached copy exists, it shows a `vscode.window.showErrorMessage` and rethrows so the
+command fails visibly instead of as an unhandled rejection.
+
+**Rationale:** A transient remote hiccup shouldn't block opening a file the user already has a
+local copy of; but silently swallowing the error would hide staleness from the user, hence the
+warning message.
 
 ---
 
@@ -166,6 +200,7 @@ Potential future design:
 When you make a notable design choice:
 
 1. Add a short section here describing:
+
    - the decision
    - the rationale
    - key implications
