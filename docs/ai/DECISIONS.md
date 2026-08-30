@@ -244,6 +244,37 @@ Potential future design:
 
 ---
 
+## 10. No Mocking Library — Test Real, Deterministic Side Effects Instead
+
+**Decision:** `ApplicationLauncher`/`utils/open.ts`'s `shellCommand` path is tested by actually
+running a real (deterministic, side-effect-free) shell command — `echo ... > tempfile` — instead
+of stubbing `child_process.exec`, `open`, or `vscode.env.openExternal` with a mocking library.
+
+**Rationale:** This mirrors how the resolver tests (Milestone 3b) exercise real filesystem I/O
+against a forged local URI instead of mocking `workspace.fs` — real execution is trustworthy where
+it's safe and deterministic to run, and this project has no mocking library today, so adding one
+would be a tooling decision with its own maintenance cost. The `shellCommand` path is a good fit:
+`exec`-ing a trivial, deterministic command and asserting on its output file is safe in CI and
+exercises the actual variable-substitution/`shellEnv`-merge logic end to end, which is the part
+most worth verifying (it's the most complex, most bug-prone branch — see the `${file}`/
+`fsPathOverride` handling `parseVariables` needed for issue #83).
+
+**What's still untested, and why:** the `openCommand`/`isElectronApp`/default paths
+(`openByPkg`/`openByBuiltinApi`) spawn real OS-level "open with the default/configured
+application" behavior — there's no safe, deterministic way to assert that succeeded in a headless
+CI runner (it would try to launch a real GUI app or invoke OS shell-execute semantics). Testing
+those meaningfully would require a mocking library (to stub the `open` package and
+`vscode.env.openExternal`); not adding one preemptively — revisit only if a real bug surfaces in
+those paths that tests would have caught.
+
+**Implications:**
+
+- `test/open.test.ts`'s `shellCommand` tests are POSIX-only (skipped on `win32`): `cmd.exe`
+  quoting differs enough from `sh` that a single portable command string wasn't worth chasing for
+  this coverage.
+
+---
+
 ## How to Use This Document
 
 When you make a notable design choice:

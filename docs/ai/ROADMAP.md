@@ -170,9 +170,12 @@ test suite. See `DECISIONS.md` §6 for the caching decision this refines.
 
 - Add logging around URI resolution, downloads, and application launch. ✅ (see
   `RemoteResolver`/`utils/logger.ts` usage from Milestone 3b)
-- Introduce automated tests for resolvers and launcher behavior. ✅ for `RemoteResolver`
-  (staleness, fallback, pruning); `ApplicationLauncher`/`utils/open.ts` still only has thin
-  coverage (`getLaunchTarget` only).
+- Introduce automated tests for resolvers and launcher behavior. ✅ `RemoteResolver` (staleness,
+  fallback, pruning, provider detection), `parseVariables` (path/env/config substitution), and
+  `open()`'s `shellCommand` path (variable substitution + `shellEnv` merge into a real `exec`
+  call — no mocking library needed for this, see `DECISIONS.md` §10). The `openCommand`/
+  `isElectronApp`/default paths (which spawn real OS "open with default app" behavior) remain
+  deliberately untested — no safe, deterministic way to assert that in CI.
 - Set up CI (build + tests) for the repository. ✅ already existed (`.github/workflows/ci.yml`,
   runs `pnpm test` via `xvfb-run` on Linux + native on macOS/Windows) but only triggered on
   `main` pushes — extended to also trigger on `develop` so work lands with CI feedback instead of
