@@ -160,7 +160,7 @@ test suite. See `DECISIONS.md` §6 for the caching decision this refines.
 
 ---
 
-## Milestone 6 — Quality and Reliability 🚧 In Progress
+## Milestone 6 — Quality and Reliability ✅ Completed
 
 **Goals:**
 
@@ -186,14 +186,16 @@ test suite. See `DECISIONS.md` §6 for the caching decision this refines.
 
 **Acceptance criteria:**
 
-- Core features are covered by tests. — resolver layer done; launcher/`utils/open.ts` still thin.
-- CI runs on each commit/PR. — runs on push to `main`/`develop`; no `pull_request` trigger yet
+- Core features are covered by tests. ✅ resolver layer + `parseVariables` + `open()`'s
+  `shellCommand` path; the OS-level "open with default app" paths are deliberately left untested
+  (see `DECISIONS.md` §10) rather than adding a mocking library for uncertain benefit.
+- CI runs on each commit/PR. ✅ for commits (push to `main`/`develop`); no `pull_request` trigger
   (not needed for a single-maintainer fork without external PRs).
 - Documentation reflects actual behavior and configuration. ✅
 
 ---
 
-## Milestone 7 — Marketplace Release
+## Milestone 7 — Marketplace Release 🚧 In Progress
 
 **Goals:**
 
@@ -201,14 +203,21 @@ test suite. See `DECISIONS.md` §6 for the caching decision this refines.
 
 **Tasks:**
 
-- Finalize extension manifest and branding.
-- Prepare release notes describing features and limitations.
-- Build and test the VSIX package.
+- Finalize extension manifest and branding. — not started (still upstream's manifest/branding;
+  fine as-is for personal use, revisit only if actually publishing under a new identity).
+- Prepare release notes describing features and limitations. — not started.
+- Build and test the VSIX package. ✅ `pnpm package` (`vsce package --no-dependencies`) verified
+  working: produces a clean 17-file `.vsix`. Found and fixed a packaging gap along the way —
+  `.vscodeignore` didn't exclude `docs/ai/` or `CLAUDE.md`, so every AI-collaboration process doc
+  was being bundled into the shipped package; excluded now. "Tested" here means packaging succeeds
+  and the file list is correct — actual install-and-use-it-in-Remote-SSH verification still needs a
+  real VS Code environment (this sandbox can't run the Electron GUI — see `SESSION_LOG.md`).
 
 **Acceptance criteria:**
 
-- A downloadable VSIX is available.
-- Users can install and use the extension in Remote-SSH and local scenarios.
+- A downloadable VSIX is available. ✅ builds cleanly via `pnpm package`.
+- Users can install and use the extension in Remote-SSH and local scenarios. — not yet verified
+  end-to-end; needs a real VS Code + Remote-SSH session to confirm.
 
 ---
 

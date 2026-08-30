@@ -13,6 +13,10 @@ test
 test-workspace
 .vscode-test
 
+# internal AI-collaboration process docs, not user-facing
+docs
+CLAUDE.md
+
 # configs
 .github
 .vscode
