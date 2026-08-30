@@ -531,3 +531,55 @@ remote app choice), and answer the "how do I install and test this" question.
 - GitHub Codespaces authority prefix still unconfirmed (carried over from Sessions 007-008).
 - Milestone 7/8 manifest rebranding (publisher id, extension name) is deferred until the user is
   actually ready to publish — not needed for the personal-build phase.
+
+---
+
+# Session 010
+
+**Date:** 2026-08-30
+
+## Objective
+
+Before installing/testing: give the fork its own extension identity (so it can't collide with or
+overwrite the real upstream extension) and rewrite the README to describe only what this fork
+adds, per explicit user request — pulled forward from Milestone 8, which had this deferred until
+actual Marketplace publish time.
+
+## Summary
+
+- Changed the extension identity in `package.json`: `publisher` `YuTengjing` → `BoyangMichael`,
+  `name` `open-in-external-app` → `open-in-external-app-remote`, `displayName` → "Open in External
+  App (Remote)". The extension ID is `publisher.name`, so this is now fully distinct from the
+  original `YuTengjing.open-in-external-app` — confirmed by rebuilding the `.vsix` and inspecting
+  `extension.vsixmanifest` directly (`Id="open-in-external-app-remote"`,
+  `Publisher="BoyangMichael"`).
+- Updated `author`/`repository`/`homepage`/`bugs` to the fork's own GitHub
+  (`BoyangMichael/open-in-external-app`) and removed the marketplace-stats badges (they linked to
+  the original listing's stats, which would misrepresent this fork).
+- `LICENSE`: kept the original MIT copyright notice (required by the license itself) and added a
+  fork-additions copyright line rather than replacing it.
+- Rewrote `README.md` from scratch: a short "this is a fork of X" notice, then only the features
+  this fork actually adds (remote file caching/staleness/eviction, "Open Using Remote App" +
+  `location` config field, provider support status), with a link to the original repo's README for
+  the unchanged base configuration reference instead of duplicating ~300 lines of it.
+- Re-verified `pnpm package` after the identity change: builds
+  `open-in-external-app-remote-0.11.3.vsix` cleanly, 17 files, correct manifest identity.
+- Updated `ROADMAP.md` Milestones 7/8 to reflect the identity work being done now rather than
+  deferred to publish time, and recorded the change in the roadmap's own "user direction" notes.
+
+## Links
+
+- [package.json](package.json)
+- [LICENSE](LICENSE)
+- [README.md](README.md)
+- [docs/ai/ROADMAP.md](docs/ai/ROADMAP.md)
+
+## Open Questions / TODOs
+
+- Extension icon (`images/logo.png`) still the original upstream logo — not asked for, but worth a
+  glance before an actual Marketplace publish given the rest of the branding changed.
+- Everything from Session 009's open questions still applies (Milestone 5b unverified in a real
+  Remote-SSH session, `extensionKind` fix unconfirmed, Codespaces prefix unconfirmed) — this
+  session didn't touch functional code, only identity/docs.
+- Marketplace publish itself (VS Marketplace/Open VSX publisher account + tokens) is still not
+  started — Milestone 8's remaining tasks.
