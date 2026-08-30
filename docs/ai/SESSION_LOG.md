@@ -816,3 +816,14 @@ subfolder instead?
 - Still waiting on final confirmation that "Open in Local App" works end to end (carried over from
   Session 013 - not yet explicitly confirmed by the user).
 - Everything else from Sessions 010-013's open questions not touched here still stands.
+
+---
+
+**2026-08-31, end of day:** user confirmed "it works perfectly now" — both "remote file → local
+app" (Milestone 4) and "remote file → remote app" (Milestone 5b) are verified working in their
+real Remote-SSH session. Marked both milestones completed-and-confirmed in `ROADMAP.md`. Remaining
+open items across all of today's sessions (005-014): extension icon still upstream's, GitHub
+Codespaces provider prefix unconfirmed, Marketplace publisher account/tokens not set up, "local
+file → remote app" explicitly deferred (`README.md`), and `ApplicationLauncher`'s `openCommand`/
+`isElectronApp`/default-app paths remain untested (no mocking library, deliberate — `DECISIONS.md`
+§10).

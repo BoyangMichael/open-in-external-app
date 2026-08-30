@@ -107,7 +107,7 @@ test suite. See `DECISIONS.md` §6 for the caching decision this refines.
 
 ---
 
-## Milestone 4 — Application Launch for Resolved Files ✅ Bug found and fixed in real testing
+## Milestone 4 — Application Launch for Resolved Files ✅ Completed, confirmed in real use
 
 **Update (2026-08-31):** real Remote-SSH testing found that "remote file → local app" — this
 milestone's core acceptance criterion — failed with an uncaught `ENOENT: mkdir ''`. Root cause:
@@ -118,9 +118,10 @@ bad manifest default, added a defensive `|| DEFAULT_CACHE_DIR` guard, moved cach
 inside the existing error handling, added regression tests. A progress-notification-and-timeout
 mitigation from the same investigation (visible feedback + bounded failure instead of an
 apparent-hang) remains in place regardless. See `DECISIONS.md` §15 (superseded diagnosis, kept for
-the record) and §16 (actual root cause). **Awaiting user confirmation that this actually fixes
-"Open in Local App" in their real session** before calling this milestone re-closed with
-confidence.
+the record), §16 (actual root cause), and §17 (default cache location hardened further to
+`globalStorageUri`). **User confirmed "Open in Local App" now works correctly** — both "remote file
+→ local app" and "remote file → remote app" (Milestone 5b) are verified working in a real
+Remote-SSH session as of this date.
 
 **Goals:**
 
@@ -180,7 +181,7 @@ confidence.
 
 ---
 
-## Milestone 5b — Local vs. Remote App Choice ✅ Implemented (unverified end-to-end)
+## Milestone 5b — Local vs. Remote App Choice ✅ Completed, confirmed in real use
 
 **Why:** User-defined goal (2026-08-30), more concrete than Milestone 5's original "(future) remote
 applications" placeholder.
