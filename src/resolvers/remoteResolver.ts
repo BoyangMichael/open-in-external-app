@@ -25,10 +25,15 @@ export function getRemoteProviderType(uri: Uri): string | undefined {
     return undefined;
 }
 
-function getConfiguredCacheDir(): string {
-    return vscode.workspace
+export function getConfiguredCacheDir(): string {
+    // VS Code treats a manifest-declared configuration default as *the* value, so
+    // .get()'s own (jsDefault) fallback only applies when there's truly no default
+    // anywhere - it does not override an empty-string default declared in
+    // package.json. Guard here too in case a user explicitly clears the setting.
+    const configured = vscode.workspace
         .getConfiguration()
         .get<string>('openInExternalApp.cacheDir', DEFAULT_CACHE_DIR);
+    return configured || DEFAULT_CACHE_DIR;
 }
 
 interface CacheMeta {
@@ -101,9 +106,6 @@ export class RemoteResolver implements FileResolver {
         }
 
         const cacheDir = getConfiguredCacheDir();
-
-        await this.ensureCacheDir(cacheDir);
-
         const cacheFileName = basename(uri.path) || 'remote-file';
         const safeAuthority = uri.authority.replaceAll(/[^\w.-]/g, '_');
         const cachePath = join(cacheDir, `${safeAuthority}-${cacheFileName}`);
@@ -113,6 +115,7 @@ export class RemoteResolver implements FileResolver {
         let refreshed = false;
         let staleFallback = false;
         try {
+            await this.ensureCacheDir(cacheDir);
             const remoteMtime = (await vscode.workspace.fs.stat(uri)).mtime;
             const cachedMeta = cacheExisted ? await readJson<CacheMeta>(metaPath) : undefined;
 

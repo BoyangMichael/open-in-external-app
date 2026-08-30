@@ -144,7 +144,7 @@
                 },
                 "openInExternalApp.cacheDir": {
                     "type": "string",
-                    "default": ""
+                    "description": "%cfg.openInExternalApp.cacheDir%"
                 },
                 "openInExternalApp.cacheMaxAgeDays": {
                     "type": "number",
