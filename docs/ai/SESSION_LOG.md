@@ -223,3 +223,64 @@ Refine the remote resolver implementation and keep the AI documentation aligned 
 
 - Add cache invalidation and cleanup heuristics for downloaded remote files.
 - Extend the resolver layer to support additional URI providers beyond the initial Remote-SSH-style path.
+
+---
+
+# Session 005
+
+**Date:** 2026-08-30
+
+## Objective
+
+Revert an abandoned, unwired `normalizedPath`/`remoteMetadata` WIP change to `ResolvedFile`, then
+address the staleness and error-handling gaps identified in Milestone 3's caching implementation
+(Milestone 3b).
+
+## Summary
+
+- Reverted uncommitted changes to `baseResolver.ts`, `localResolver.ts`, and `remoteResolver.ts`
+  that had added `normalizedPath`/`remoteMetadata` fields to `ResolvedFile` with no consumer
+  anywhere in the codebase — the author didn't recall the intent behind them, so they were dropped
+  rather than finished blind.
+- Added Milestone 3b to `ROADMAP.md` and decisions 6a/6b to `DECISIONS.md` covering: cache
+  staleness detection, resilient error handling on remote stat/download failure, and (still open)
+  cache eviction policy.
+- Implemented staleness detection in `RemoteResolver`: before reusing a cached file, its remote
+  `mtime` (via `workspace.fs.stat`) is compared against an `mtime` recorded in a JSON sidecar
+  (`<cachePath>.meta.json`) from the last successful download; a mismatch triggers a re-download.
+- Implemented resilient error handling: a failed remote `stat`/`readFile` falls back to an existing
+  stale cached copy with a `showWarningMessage`, or shows a `showErrorMessage` and rethrows when no
+  cache exists yet. Added `msg.error.remoteFileUnavailable` / `msg.warning.remoteFileStale` to
+  `package.nls.json`.
+- Added a `readJson<T>` helper to `utils/fs.ts`.
+- `ResolvedFile.cacheInfo` for the remote path now carries `{ cachePath, cached, refreshed, stale }`
+  so callers/tests can observe which of the three outcomes (fresh reuse, refresh, stale fallback)
+  occurred.
+- Added three new tests in `test/resolverLauncher.test.ts` covering cache reuse, refresh-on-change,
+  and stale-fallback-on-error, using a `file://` URI with a forged `ssh-remote+` authority so the
+  tests exercise real filesystem I/O without an actual remote connection; each test isolates its
+  own cache dir via `openInExternalApp.cacheDir` config to avoid cross-test pollution (the cache
+  key is only `authority + basename`, not the full path).
+- Verified with `tsc -b`, `eslint`, and `prettier --check` — all clean. **Could not run the actual
+  Mocha/`@vscode/test-electron` suite in this sandbox**: the downloaded VS Code Insiders binary
+  fails to launch at all (`bad option: --disable-extensions`, exit code 9), independent of this
+  change. The new tests need to be run in a real dev environment (`pnpm test`) to confirm.
+
+## Links
+
+- [src/resolvers/remoteResolver.ts](src/resolvers/remoteResolver.ts)
+- [src/utils/fs.ts](src/utils/fs.ts)
+- [package.nls.json](package.nls.json)
+- [test/resolverLauncher.test.ts](test/resolverLauncher.test.ts)
+- [docs/ai/ROADMAP.md](docs/ai/ROADMAP.md)
+- [docs/ai/DECISIONS.md](docs/ai/DECISIONS.md)
+
+## Open Questions / TODOs
+
+- Cache eviction/cleanup policy is still undecided (time-based vs. manual vs. size-based) —
+  Milestone 3b task 3, not yet implemented.
+- `pnpm test` needs to be run in a real environment to confirm the new tests pass; not verified in
+  this session beyond typecheck/lint.
+- Sessions 003 and 004's commits (`123da84`, `80874df`) landed after `AGENTS.md`'s doc-sync rule
+  existed but this log wasn't updated between commit `cb683f6` and this session — worth keeping an
+  eye on so the log doesn't drift from `git log` again.
