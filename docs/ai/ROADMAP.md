@@ -246,24 +246,24 @@ applications" placeholder.
 
 ## Milestone 7 — Personal Build Now, Marketplace Later 🚧 In Progress
 
-**User direction (2026-08-30):** right now this is a personal build for the user's own use — no
-rebranding/manifest work needed yet. Eventually (see Milestone 8) they do want to publish it as
-its own listing on the VS Code Marketplace for anyone to install — that's a distinct goal from
-upstreaming (Milestone 8 used to conflate the two; no longer does). Manifest/branding work
-(distinct `publisher`, possibly `name`, since it can't stay under the original author's
-`YuTengjing` publisher — see Milestone 8) is deferred until they're actually ready to publish, not
-done preemptively.
+**User direction (2026-08-30):** personal build for now; eventually (see Milestone 8) publish as
+its own Marketplace listing. Manifest/branding was originally deferred until publish time, but the
+user asked for it now (2026-08-30, same day) specifically to avoid any risk of the local `.vsix`
+colliding with/overwriting a real install of the original upstream extension — see the identity
+change below, done ahead of schedule relative to the original plan.
 
 **Tasks:**
 
-- Finalize extension manifest and branding. — deferred until publish time (see Milestone 8).
-- Prepare release notes describing features and limitations. — deferred until publish time.
+- Finalize extension manifest and branding. ✅ done ahead of schedule (see Milestone 8's identity
+  section) — README and manifest identity, not full release-ready branding (icon unchanged).
+- Prepare release notes describing features and limitations. — still deferred until publish time.
 - Build and test the VSIX package for personal use. ✅ `pnpm package` (`vsce package
---no-dependencies`) verified working: produces a clean 17-file `.vsix`. Found and fixed a
-  packaging gap along the way — `.vscodeignore` didn't exclude `docs/ai/` or `CLAUDE.md`, so every
-  AI-collaboration process doc was being bundled in; excluded now. "Tested" here means packaging
-  succeeds and the file list is correct — actual install-and-use-it-in-Remote-SSH verification
-  still needs a real VS Code environment (this sandbox can't run the Electron GUI).
+--no-dependencies`) verified working, including after the identity change (produces
+  `open-in-external-app-remote-<version>.vsix`, ID `BoyangMichael.open-in-external-app-remote`).
+  Found and fixed a packaging gap along the way — `.vscodeignore` didn't exclude `docs/ai/` or
+  `CLAUDE.md`; excluded now. "Tested" here means packaging succeeds and the file list/identity are
+  correct — actual install-and-use-it-in-Remote-SSH verification still needs a real VS Code
+  environment (this sandbox can't run the Electron GUI).
 
 **Acceptance criteria:**
 
@@ -280,24 +280,30 @@ publish this fork as its **own separate** listing on the VS Code Marketplace so 
 it. This is a different goal from the original "upstream collaboration" framing (kept the milestone
 number; renamed to match).
 
-**Implications carried over from Milestone 7:**
+**Extension identity — done (2026-08-30):**
 
-- Needs a distinct `publisher` (can't publish under `YuTengjing`, the original author's publisher
-  id, without their account) and likely a distinct extension `name`/`displayName` to avoid
-  collision/confusion with the original `YuTengjing.open-in-external-app` listing — including the
-  practical risk that installing a same-ID `.vsix` locally would silently overwrite an existing
-  install of the real upstream extension if the user has both. Not done yet — deferred to when
-  they're ready to actually publish (Milestone 7).
+- `publisher`: `YuTengjing` → `BoyangMichael`. `name`: `open-in-external-app` →
+  `open-in-external-app-remote`. `displayName`: `Open in External App` → `Open in External App
+(Remote)`. The extension ID (`publisher.name`) is now fully distinct from the original
+  `YuTengjing.open-in-external-app` — verified in the built `.vsixmanifest`, so installing this
+  `.vsix` can no longer collide with or overwrite a real install of the upstream extension.
+- `author`/`repository`/`homepage`/`bugs` updated to the user's fork; marketplace-stats badges
+  removed (they pointed at the original listing's stats). `LICENSE` keeps the original MIT
+  copyright notice (required) and adds a fork-additions copyright line.
+- `README.md` rewritten to describe only the fork's additions, linking to the original repo's
+  README for the unchanged base configuration reference rather than duplicating it.
+- Not yet done: extension icon (`images/logo.png`, still the original logo — user didn't ask for
+  this, revisit if it matters before an actual Marketplace publish), release notes.
 - `package.json` already has `publish:vs-marketplace`/`publish:open-vsx` scripts and
-  `.github/workflows/ci.yml` already has a tag-triggered publish job — both assume the original
-  publisher's marketplace tokens (`VS_MARKETPLACE_TOKEN`/`OPEN_VSX_TOKEN` secrets); will need the
-  user's own tokens once they're ready to publish under their own identity.
+  `.github/workflows/ci.yml` already has a tag-triggered publish job — both will need the user's
+  own `VS_MARKETPLACE_TOKEN`/`OPEN_VSX_TOKEN` secrets (their own publisher account, not the
+  original author's) once they're ready to actually publish.
 
 **Tasks:**
 
-- Decide on a publisher id, extension name, and branding (deferred — see Milestone 7).
-- Set up the user's own VS Marketplace/Open VSX publisher account and tokens.
-- Publish an initial release.
+- Decide on a publisher id, extension name, and branding. ✅ (see above)
+- Set up the user's own VS Marketplace/Open VSX publisher account and tokens. — not started.
+- Publish an initial release. — not started.
 
 **Acceptance criteria:**
 
