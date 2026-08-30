@@ -25,6 +25,15 @@ interface ExternalAppConfig {
      * @example false - Keep WSL native path for WSL applications like evince
      */
     wslConvertWindowsPath?: boolean;
+    /**
+     * Where this app runs. 'local' (default) launches it on the machine running VS Code,
+     * the same as before this field existed. 'remote' launches it on the remote (SSH/WSL/
+     * container) host via a VS Code integrated terminal instead - only offered when the
+     * resolved file actually lives on a remote host. Remote apps only support shellCommand
+     * (openCommand/isElectronApp are inherently local-machine mechanisms).
+     * @default 'local'
+     */
+    location?: 'local' | 'remote';
 }
 
 interface ExtensionConfigItem {

@@ -36,6 +36,7 @@ export function validateConfiguration(configuration: ExtensionConfigItem[]): joi
                                 }),
                             ),
                             wslConvertWindowsPath: joi.boolean(),
+                            location: joi.string().valid('local', 'remote'),
                         }),
                     ),
                 )
