@@ -644,3 +644,62 @@ feedback from the user.
   check.
 - Everything else from Session 010's open questions still stands (icon, Codespaces prefix,
   Marketplace account setup).
+
+---
+
+# Session 012
+
+**Date:** 2026-08-31
+
+## Objective
+
+Follow up on Session 011's fixes: the user confirmed "Open in Remote App" now works, but
+"Open in Local App" — the fork's original core purpose — still does nothing on a small remote
+file. Diagnose from Output panel logs and ship a mitigation.
+
+## Summary
+
+- User confirmed the remote-app fix works. Then reported local-app still silent, on a file
+  explicitly noted as very small (ruling out a slow-download-of-a-big-file theory).
+- Asked for Output panel logs rather than guessing further; got them. The logs showed the command
+  handler running normally through config matching and variable substitution, immediately followed
+  by a **successful remote-app launch** (confirming that attempt), and then **four repeated
+  `parsed args` log lines with nothing after them** — one per local-app click, since each one
+  produced no further output before the user gave up and clicked again.
+- Diagnosis: `resolver.resolve(uri)`'s first remote call, `vscode.workspace.fs.stat(uri)`, appears
+  to never resolve or reject at all for this connection — not slow, seemingly stuck. Critically,
+  Session 011's remote-app fix didn't fix this: it made the remote-app path **stop depending on
+  `workspace.fs` entirely**, so "remote works" was never evidence this call was healthy. The
+  local-app path still needs it (that's the actual point of downloading a local cache), so it's
+  still exposed to whatever is wrong. Documented in `DECISIONS.md` §15, including what's still not
+  established (whether this is an `extensionKind: ["ui"]` interaction, a general remote connection/
+  filesystem latency issue on their HPC host, or something else).
+- Shipped a mitigation, not a root-cause fix (root cause needs more diagnosis than is possible
+  from a transcript, and this sandbox can't reproduce their SSH connection at all): wrapped the
+  local-path `resolver.resolve()` call in `vscode.window.withProgress` (visible "Downloading..."
+  notification instead of total silence) and a 30-second timeout that surfaces an error message
+  instead of hanging forever. Marked Milestone 4 (`ROADMAP.md`) as a regression rather than
+  claiming it's still "Completed."
+- Rebuilt and reinstalled the `.vsix` again.
+
+## Links
+
+- [src/openInExternalApp.ts](src/openInExternalApp.ts)
+- [package.nls.json](package.nls.json)
+- [docs/ai/DECISIONS.md](docs/ai/DECISIONS.md)
+- [docs/ai/ROADMAP.md](docs/ai/ROADMAP.md)
+
+## Open Questions / TODOs
+
+- **Top priority**: does "Open in Local App" now show the new "Downloading..." progress
+  notification, and does it ever complete (even slowly) or does it hit the 30s timeout? This is
+  the single most informative next data point — it distinguishes "slow" from "genuinely stuck."
+- Does opening the same file normally through VS Code's built-in editor (bypassing this extension
+  entirely) work fine? If that's also slow/stuck, the issue is likely outside this extension's
+  control (network/filesystem); if that's fine but our `workspace.fs.stat` call hangs, the issue is
+  specific to how/where this extension calls it.
+- If the hang is confirmed real (not just slow), next investigation should consider: does removing
+  `extensionKind: ["ui"]` change anything (isolates whether that's implicated); does calling
+  `workspace.fs.readFile` directly instead of `stat` first behave differently; is there a simpler
+  repro (e.g. a fresh minimal test extension) that could narrow this down without needing the
+  user's exact environment.

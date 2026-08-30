@@ -107,7 +107,13 @@ test suite. See `DECISIONS.md` §6 for the caching decision this refines.
 
 ---
 
-## Milestone 4 — Application Launch for Resolved Files ✅ Completed
+## Milestone 4 — Application Launch for Resolved Files ⚠️ Regression found in real testing
+
+**Update (2026-08-31):** real Remote-SSH testing found that "remote file → local app" — this
+milestone's core acceptance criterion — hangs silently (`vscode.workspace.fs.stat` never
+resolves/rejects for at least one real connection). A mitigation shipped (progress notification +
+30s timeout, so the failure is visible and bounded instead of silent and infinite), but the root
+cause is not yet found. See `DECISIONS.md` §15.
 
 **Goals:**
 
