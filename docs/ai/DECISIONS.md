@@ -352,6 +352,37 @@ remote app via a real `Terminal` in a real Remote-SSH session has not been confi
 sandbox can't run the Electron GUI needed for that (same limitation noted throughout
 `SESSION_LOG.md`).
 
+**Update (2026-08-30, first real Remote-SSH test):** the user confirmed both context-menu entries
+_appear_ correctly on a remote file in a real Remote-SSH session — the `extensionKind: ["ui"]` fix
+(§11) and command/menu registration are confirmed working end to end. Clicking "Open Using Remote
+App" produced no visible effect, though — still investigating whether that's a real bug or the
+(easy-to-miss) "no remote app configured for this file type" info toast firing as designed with no
+`location: "remote"` app actually configured yet. See §13.
+
+---
+
+## 13. Menu UX Fix — Submenu for Adjacency, Consistent Naming
+
+**Problem reported (2026-08-30):** in a real context menu, `openInExternalApp.open` and
+`openInExternalApp.openRemote` didn't appear next to each other — VS Code's "Open to the Side"
+(unrelated to this extension) rendered between them, despite both being registered in the same
+`navigation` group with adjacent `@10`/`@11` order values. Menu order within a shared group across
+_different_ extensions/core commands isn't fully controllable via order numbers alone.
+
+**Fix:** wrap both under a single submenu contribution (`openInExternalApp.submenu`, labeled "Open
+in External App") so they're always rendered together as one expandable entry, immune to
+interleaving from unrelated menu items — the standard VS Code idiom for this exact problem (used
+by e.g. Git's "Open Changes"/"Compare with..." submenus). The `alt`-key swap to
+`openInExternalApp.openMultiple` still works inside the submenu's own item list.
+
+**Also renamed for consistency** (per user request): `openInExternalApp.open` "Open in External
+App" → **"Open in Local App"**; `openInExternalApp.openMultiple` "Open in Multiple External Apps"
+→ **"Open in Multiple Local Apps"**; `openInExternalApp.openRemote` "Open Using Remote App" →
+**"Open in Remote App"**. The umbrella submenu label took over the old "Open in External App"
+title. The settings page title (`contributes.configuration.title`) was also repointed from
+`cmd.open` to the new `cmd.submenu` key, since it represents the whole extension, not specifically
+the local-open command.
+
 ---
 
 ## How to Use This Document

@@ -99,36 +99,42 @@
                 "title": "%cmd.openRemote%"
             }
         ],
+        "submenus": [
+            {
+                "id": "openInExternalApp.submenu",
+                "label": "%cmd.submenu%",
+                "icon": "$(link-external)"
+            }
+        ],
         "menus": {
             "explorer/context": [
                 {
                     "when": "!explorerResourceIsFolder && isFileSystemResource",
-                    "command": "openInExternalApp.open",
-                    "alt": "openInExternalApp.openMultiple",
+                    "submenu": "openInExternalApp.submenu",
                     "group": "navigation@10"
-                },
-                {
-                    "when": "!explorerResourceIsFolder && isFileSystemResource",
-                    "command": "openInExternalApp.openRemote",
-                    "group": "navigation@11"
                 }
             ],
             "editor/title/context": [
                 {
                     "when": "isFileSystemResource",
+                    "submenu": "openInExternalApp.submenu",
+                    "group": "navigation@10"
+                }
+            ],
+            "openInExternalApp.submenu": [
+                {
                     "command": "openInExternalApp.open",
                     "alt": "openInExternalApp.openMultiple",
                     "group": "navigation@10"
                 },
                 {
-                    "when": "isFileSystemResource",
                     "command": "openInExternalApp.openRemote",
                     "group": "navigation@11"
                 }
             ]
         },
         "configuration": {
-            "title": "%cmd.open%",
+            "title": "%cmd.submenu%",
             "type": "Object",
             "default": {},
             "properties": {
