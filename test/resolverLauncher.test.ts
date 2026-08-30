@@ -8,7 +8,11 @@ import { ConfigurationTarget, Uri, workspace } from 'vscode';
 import { ApplicationLauncher } from '../src/launchers/applicationLauncher';
 import type { ResolvedFile } from '../src/resolvers/baseResolver';
 import { LocalResolver } from '../src/resolvers/localResolver';
-import { getRemoteProviderType, RemoteResolver } from '../src/resolvers/remoteResolver';
+import {
+    getRemoteProviderType,
+    pruneStaleCache,
+    RemoteResolver,
+} from '../src/resolvers/remoteResolver';
 
 /**
  * Builds a URI that RemoteResolver treats as a remote ("ssh") file (via a forged
@@ -140,6 +144,72 @@ describe('#resolverLauncher', () => {
             assert.strictEqual((second.cacheInfo as any).stale, true);
             const content = await fs.readFile(second.localPath, 'utf8');
             assert.strictEqual(content, 'v1');
+        });
+    });
+
+    describe('pruneStaleCache', () => {
+        let cacheDir: string;
+
+        beforeEach(async () => {
+            cacheDir = await fs.mkdtemp(path.join(os.tmpdir(), 'oiea-cache-prune-'));
+        });
+
+        afterEach(async () => {
+            await fs.rm(cacheDir, { recursive: true, force: true });
+        });
+
+        it('should remove entries older than maxAgeMs along with their sidecar metadata', async () => {
+            const stale = path.join(cacheDir, 'stale-file.txt');
+            const staleMeta = `${stale}.meta.json`;
+            const fresh = path.join(cacheDir, 'fresh-file.txt');
+
+            await fs.writeFile(stale, 'old');
+            await fs.writeFile(staleMeta, JSON.stringify({ mtime: 1 }));
+            await fs.writeFile(fresh, 'new');
+
+            const old = new Date(Date.now() - 10000);
+            await fs.utimes(stale, old, old);
+
+            await pruneStaleCache(cacheDir, 5000);
+
+            assert.strictEqual(
+                await fs.access(stale).then(
+                    () => true,
+                    () => false,
+                ),
+                false,
+            );
+            assert.strictEqual(
+                await fs.access(staleMeta).then(
+                    () => true,
+                    () => false,
+                ),
+                false,
+            );
+            assert.strictEqual(
+                await fs.access(fresh).then(
+                    () => true,
+                    () => false,
+                ),
+                true,
+            );
+        });
+
+        it('should do nothing when maxAgeMs is 0 (pruning disabled)', async () => {
+            const filePath = path.join(cacheDir, 'file.txt');
+            await fs.writeFile(filePath, 'content');
+            const old = new Date(Date.now() - 1000 * 60 * 60 * 24 * 365);
+            await fs.utimes(filePath, old, old);
+
+            await pruneStaleCache(cacheDir, 0);
+
+            assert.strictEqual(
+                await fs.access(filePath).then(
+                    () => true,
+                    () => false,
+                ),
+                true,
+            );
         });
     });
 });
