@@ -99,6 +99,10 @@
             {
                 "command": "openInExternalApp.openMultiple",
                 "title": "%cmd.openMultiple%"
+            },
+            {
+                "command": "openInExternalApp.openRemote",
+                "title": "%cmd.openRemote%"
             }
         ],
         "menus": {
@@ -108,6 +112,11 @@
                     "command": "openInExternalApp.open",
                     "alt": "openInExternalApp.openMultiple",
                     "group": "navigation@10"
+                },
+                {
+                    "when": "!explorerResourceIsFolder && isFileSystemResource",
+                    "command": "openInExternalApp.openRemote",
+                    "group": "navigation@11"
                 }
             ],
             "editor/title/context": [
@@ -116,6 +125,11 @@
                     "command": "openInExternalApp.open",
                     "alt": "openInExternalApp.openMultiple",
                     "group": "navigation@10"
+                },
+                {
+                    "when": "isFileSystemResource",
+                    "command": "openInExternalApp.openRemote",
+                    "group": "navigation@11"
                 }
             ]
         },
@@ -260,6 +274,15 @@
                                                     "type": "boolean",
                                                     "description": "%cfg.openInExternalApp.openMapper.item.apps.item.wslConvertWindowsPath%",
                                                     "default": true
+                                                },
+                                                "location": {
+                                                    "type": "string",
+                                                    "enum": [
+                                                        "local",
+                                                        "remote"
+                                                    ],
+                                                    "description": "%cfg.openInExternalApp.openMapper.item.apps.item.location%",
+                                                    "default": "local"
                                                 }
                                             }
                                         }

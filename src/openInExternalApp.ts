@@ -6,10 +6,13 @@ import { localize } from 'vscode-nls-i18n';
 
 import getExtensionConfig from './config';
 import { ApplicationLauncher } from './launchers/applicationLauncher';
+import { RemoteApplicationLauncher } from './launchers/remoteApplicationLauncher';
 import { RemoteResolver } from './resolvers/remoteResolver';
 import { logger } from './utils/logger';
 import { open } from './utils/open';
 import { getActiveFileUri } from './utils/uri';
+
+const REMOTE_PROVIDER_TYPES = new Set(['ssh', 'wsl', 'container']);
 
 function getFallbackConfigItem(configuration: ExtensionConfigItem[]) {
     return configuration?.find((item) => item.extensionName === '*');
@@ -37,71 +40,116 @@ function getSharedConfigItem(configuration: ExtensionConfigItem[]) {
     return configuration.find((item) => item.extensionName === '__ALL__');
 }
 
+/**
+ * Splits an app list down to the ones matching the requested location. Apps without an
+ * explicit `location` default to 'local', so existing configs (written before `location`
+ * existed) keep working unchanged under the 'local' path. A bare command string is only
+ * usable for 'local' - there's no way to mark it 'remote'.
+ */
+export function filterAppsByLocation(
+    apps: ExternalAppConfig[] | string,
+    location: 'local' | 'remote',
+): ExternalAppConfig[] | string | undefined {
+    if (typeof apps === 'string') {
+        return location === 'local' ? apps : undefined;
+    }
+    const filtered = apps.filter((app) => (app.location ?? 'local') === location);
+    return filtered.length > 0 ? filtered : undefined;
+}
+
 const resolver = new RemoteResolver();
 const launcher = new ApplicationLauncher();
+const remoteLauncher = new RemoteApplicationLauncher();
 
+async function launchApp(
+    filePath: string,
+    appConfig: ExternalAppConfig | string,
+    location: 'local' | 'remote',
+) {
+    if (location === 'remote') {
+        // filterAppsByLocation never lets a bare string through for 'remote'
+        await remoteLauncher.launch(filePath, appConfig as ExternalAppConfig);
+        return;
+    }
+    await open(filePath, appConfig);
+}
+
+/** Returns whether any app matching `location` was found (and therefore handled). */
 async function openWithConfigItem(
     filePath: string,
     matchedConfigItem: ExtensionConfigItem,
     isMultiple: boolean,
-) {
+    location: 'local' | 'remote',
+): Promise<boolean> {
     logger.info(`open with configItem:\n${JSON.stringify(matchedConfigItem, undefined, 4)}`);
 
-    const candidateApps = matchedConfigItem.apps;
+    const candidateApps = filterAppsByLocation(matchedConfigItem.apps, location);
+    if (candidateApps === undefined) {
+        return false;
+    }
+
     if (typeof candidateApps === 'string') {
-        await open(filePath, candidateApps);
-        return;
+        await launchApp(filePath, candidateApps, location);
+        return true;
     }
 
-    if (Array.isArray(candidateApps) && candidateApps.length > 0) {
-        if (candidateApps.length === 1) {
-            await open(filePath, candidateApps[0]);
-            return;
-        }
+    if (candidateApps.length === 1) {
+        await launchApp(filePath, candidateApps[0], location);
+        return true;
+    }
 
-        // check repeat in candidateApps
-        let isRepeat = false;
-        const traversedTitles = new Set();
-        for (let i = 0, len = candidateApps.length; i < len; i++) {
-            const { title } = candidateApps[i];
-            if (traversedTitles.has(title)) {
-                isRepeat = true;
-                break;
-            }
-            traversedTitles.add(title);
+    // check repeat in candidateApps
+    let isRepeat = false;
+    const traversedTitles = new Set();
+    for (let i = 0, len = candidateApps.length; i < len; i++) {
+        const { title } = candidateApps[i];
+        if (traversedTitles.has(title)) {
+            isRepeat = true;
+            break;
         }
-        if (isRepeat) {
-            vscode.window.showErrorMessage(localize('msg.error.sameTitleMultipleApp'));
-            return;
-        }
+        traversedTitles.add(title);
+    }
+    if (isRepeat) {
+        vscode.window.showErrorMessage(localize('msg.error.sameTitleMultipleApp'));
+        return true;
+    }
 
-        const pickerItems = candidateApps.map((app) => app.title);
-        if (isMultiple) {
-            const selectedTitles = await vscode.window.showQuickPick(pickerItems, {
-                canPickMany: true,
-                placeHolder: localize('msg.quickPick.selectApps.placeholder'),
+    const pickerItems = candidateApps.map((app) => app.title);
+    if (isMultiple) {
+        const selectedTitles = await vscode.window.showQuickPick(pickerItems, {
+            canPickMany: true,
+            placeHolder: localize('msg.quickPick.selectApps.placeholder'),
+        });
+        if (selectedTitles) {
+            selectedTitles.forEach(async (title) => {
+                await launchApp(
+                    filePath,
+                    candidateApps.find((app) => app.title === title)!,
+                    location,
+                );
             });
-            if (selectedTitles) {
-                selectedTitles.forEach(async (title) => {
-                    await open(filePath, candidateApps.find((app) => app.title === title)!);
-                });
-            }
-        } else {
-            const selectedTitle = await vscode.window.showQuickPick(pickerItems, {
-                placeHolder: localize('msg.quickPick.selectApp.placeholder'),
-            });
+        }
+    } else {
+        const selectedTitle = await vscode.window.showQuickPick(pickerItems, {
+            placeHolder: localize('msg.quickPick.selectApp.placeholder'),
+        });
 
-            if (selectedTitle) {
-                await open(filePath, candidateApps.find((app) => app.title === selectedTitle)!);
-            }
+        if (selectedTitle) {
+            await launchApp(
+                filePath,
+                candidateApps.find((app) => app.title === selectedTitle)!,
+                location,
+            );
         }
     }
+    return true;
 }
 
 export default async function openInExternalApp(
     uri: Uri | undefined,
     configItemId?: string,
     isMultiple = false,
+    location: 'local' | 'remote' = 'local',
 ): Promise<void> {
     // if run command with command plate, uri is undefined, fallback to activeTextEditor
     uri ??= vscode.window.activeTextEditor?.document.uri ?? (await getActiveFileUri());
@@ -109,6 +157,13 @@ export default async function openInExternalApp(
 
     const resolvedFile = await resolver.resolve(uri);
     const filePath = resolvedFile.localPath;
+
+    if (location === 'remote' && !REMOTE_PROVIDER_TYPES.has(resolvedFile.providerType)) {
+        vscode.window.showInformationMessage(localize('msg.info.notARemoteFile'));
+        return;
+    }
+
+    const launchPath = location === 'remote' ? resolvedFile.originalUri.path : filePath;
 
     // when there is configuration map to it's extension, use [open](https://github.com/sindresorhus/open)
     // except for configured appConfig.isElectronApp option
@@ -130,19 +185,32 @@ export default async function openInExternalApp(
 
     const sharedConfigItem = getSharedConfigItem(configuration);
 
+    let handled = false;
     if (matchedConfigItem) {
         logger.info('found matched config');
-        await openWithConfigItem(filePath, matchedConfigItem, isMultiple);
-    } else if (!sharedConfigItem) {
-        // Only use system default when there's no matched config and no shared config
+        handled = await openWithConfigItem(launchPath, matchedConfigItem, isMultiple, location);
+    } else if (!sharedConfigItem && location === 'local') {
+        // Only use system default when there's no matched config and no shared config.
+        // There's no sensible "system default" for a remote app.
         logger.info('no matched config and no shared config');
         await launcher.launch(resolvedFile);
+        handled = true;
     } else {
         logger.info('no matched config, but found shared config');
     }
 
     if (sharedConfigItem) {
         logger.info('found shared config');
-        await openWithConfigItem(filePath, sharedConfigItem, false);
+        const sharedHandled = await openWithConfigItem(
+            launchPath,
+            sharedConfigItem,
+            false,
+            location,
+        );
+        handled = handled || sharedHandled;
+    }
+
+    if (location === 'remote' && !handled) {
+        vscode.window.showInformationMessage(localize('msg.info.noRemoteAppConfigured'));
     }
 }

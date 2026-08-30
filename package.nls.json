@@ -1,11 +1,15 @@
 {
     "cmd.open": "Open in External App",
     "cmd.openMultiple": "Open in Multiple External Apps",
+    "cmd.openRemote": "Open Using Remote App",
 
     "msg.error.configFormat": "Your extension configuration format isn't correct!",
     "msg.error.sameTitleMultipleApp": "Not allowed to set two applications using the same title, please correct your configuration first!",
     "msg.error.remoteFileUnavailable": "Failed to access remote file: {0}",
+    "msg.error.remoteAppNeedsShellCommand": "Remote apps must configure a shellCommand: {0}",
     "msg.warning.remoteFileStale": "Could not refresh remote file, opening a possibly outdated cached copy: {0}",
+    "msg.info.notARemoteFile": "This file is not on a remote host, there's nothing to open remotely.",
+    "msg.info.noRemoteAppConfigured": "No remote app is configured for this file type. Add one via the openInExternalApp.openMapper setting with location set to \"remote\".",
     "msg.quickPick.selectApp.placeholder": "Select application to open the file...",
     "msg.quickPick.selectApps.placeholder": "Select multiple applications to open the file...",
 
@@ -26,5 +30,6 @@
     "cfg.openInExternalApp.openMapper.item.apps.item.shellEnv.windows": "Additional shellCommand environment variables for Windows",
     "cfg.openInExternalApp.openMapper.item.apps.item.shellEnv.linux": "Additional shellCommand environment variables for Linux",
     "cfg.openInExternalApp.openMapper.item.apps.item.shellEnv.osx": "Additional shellCommand environment variables for macOS",
-    "cfg.openInExternalApp.openMapper.item.apps.item.wslConvertWindowsPath": "Whether to convert WSL path to Windows path when running in WSL remote mode. Default is true (convert to Windows path for Windows applications). Set to false to keep WSL native path for WSL applications like evince"
+    "cfg.openInExternalApp.openMapper.item.apps.item.wslConvertWindowsPath": "Whether to convert WSL path to Windows path when running in WSL remote mode. Default is true (convert to Windows path for Windows applications). Set to false to keep WSL native path for WSL applications like evince",
+    "cfg.openInExternalApp.openMapper.item.apps.item.location": "Where this app runs: \"local\" (default) launches it on the machine running VS Code; \"remote\" launches it on the remote SSH/WSL/container host via an integrated terminal instead. Remote apps only support shellCommand."
 }
