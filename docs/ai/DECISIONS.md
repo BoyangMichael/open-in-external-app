@@ -385,6 +385,39 @@ the local-open command.
 
 ---
 
+## 14. Real Bug: "Open in Remote App" Silently Downloaded the File First
+
+**Problem (found via real Remote-SSH testing, 2026-08-30):** the user reported clicking "Open in
+Remote App" and nothing visibly happening. Root cause: `openInExternalApp()` called
+`resolver.resolve(uri)` **unconditionally** at the top of the function, before even checking
+`location`. `RemoteResolver.resolve` always performs the full stat/download/cache flow (Milestone
+3b) — meaning every remote-app launch first downloaded and cached the entire file locally, even
+though a remote app never touches that local copy (it only needs `resolvedFile.originalUri.path`,
+which the caller already had from the input `uri` itself). For a large remote file (the user's
+workspace includes trajectory files, which can be very large) this could take a long time with
+**zero progress feedback**, reading exactly like "clicked, nothing happened."
+
+**Fix:** for `location === 'remote'`, skip `resolver.resolve()` entirely. Use
+`getRemoteProviderType(uri)` (a pure, synchronous function, no I/O) plus a `uri.scheme ===
+'vscode-remote'` check to confirm the file is actually remote, and use `uri.path` directly as both
+the extension-matching path and the launch path. No local download, no cache directory touched, no
+wasted latency — the remote-app path is now effectively instant regardless of file size.
+
+**Why this wasn't caught earlier:** none of the Session 007-009 unit tests exercised the full
+`openInExternalApp()` orchestration function end to end for the remote-app path — they tested
+`RemoteResolver`, `parseVariables`, `buildRemoteCommand`, and `filterAppsByLocation` in isolation,
+all of which were individually correct. The bug was in how `openInExternalApp()` wired them
+together, which only a first real end-to-end test (a human, in a real Remote-SSH session) caught.
+Added a regression test (`test/openInExternalApp.test.ts`) asserting the cache directory is never
+created for a remote-app request.
+
+**Implication:** this is a good example of why the sandbox's inability to run `pnpm test`'s real
+Electron suite, or exercise the actual VS Code UI, is a meaningful verification gap (see
+`SESSION_LOG.md` throughout) — unit tests on individual pieces don't substitute for exercising the
+integration path a real user actually clicks.
+
+---
+
 ## How to Use This Document
 
 When you make a notable design choice:

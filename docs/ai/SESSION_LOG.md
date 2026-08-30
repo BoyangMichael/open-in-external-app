@@ -583,3 +583,64 @@ actual Marketplace publish time.
   session didn't touch functional code, only identity/docs.
 - Marketplace publish itself (VS Marketplace/Open VSX publisher account + tokens) is still not
   started — Milestone 8's remaining tasks.
+
+---
+
+# Session 011
+
+**Date:** 2026-08-30
+
+## Objective
+
+Install-and-test the packaged extension: fix a menu README-vs-reality gap (the README implied the
+fork's main feature was narrower than it is), then act on the first real Remote-SSH testing
+feedback from the user.
+
+## Summary
+
+- Confirmed `extensionKind: ["ui"]` (§11) works correctly: `code --list-extensions`,
+  `code --status`, and the extension folder location all confirmed a clean local install; this
+  turned out to be genuinely verifiable from the CLI without needing GUI interaction.
+- User feedback #1: the README read as if the fork only did "local file → remote app," when the
+  two combinations they actually wanted most (remote file → local app; remote file → remote app)
+  were already built. Rewrote the README with an explicit local/remote-file × local/remote-app
+  matrix; asked and confirmed "local file → remote app" (not built) should just be documented as
+  not-yet-supported rather than built now.
+- User feedback #2 (first real Remote-SSH test): both context-menu entries appeared correctly, but
+  they weren't adjacent — VS Code's own "Open to the Side" rendered between them despite adjacent
+  `navigation@10`/`@11` order values. Fixed with a proper submenu (`openInExternalApp.submenu`,
+  labeled "Open in External App"), the standard VS Code idiom for guaranteed adjacency regardless
+  of other extensions' menu items. Also renamed per request: "Open in Local App" / "Open in Remote
+  App" / "Open in Multiple Local Apps".
+- User feedback #3: clicking "Open in Remote App" (with a real `location: "remote"` app already
+  configured) produced no visible effect. Traced it to a real bug: `openInExternalApp()` called
+  `resolver.resolve(uri)` — the full stat/download/cache flow — **unconditionally**, even for the
+  remote-app path, which never needed a local copy at all. On a large remote file (the user's
+  workspace has trajectory files) this could hang silently for a while with zero progress
+  feedback, which is exactly what "nothing happens" would look like. Fixed: `location === 'remote'`
+  now skips `resolver.resolve()` entirely, using `getRemoteProviderType(uri)` (pure, synchronous)
+  and `uri.path` directly. Added a regression test asserting no cache directory gets created for a
+  remote-app request. See `DECISIONS.md` §14 — also noted there _why_ this wasn't caught by
+  Sessions 007-009's unit tests: they covered the individual pieces correctly, but not the
+  `openInExternalApp()` orchestration wiring itself, which only a real end-to-end click caught.
+- Rebuilt and reinstalled the `.vsix` twice (once after the submenu fix, once after the
+  download-skip fix) via `code --install-extension`, confirmed each time via `--list-extensions`.
+
+## Links
+
+- [src/openInExternalApp.ts](src/openInExternalApp.ts)
+- [test/openInExternalApp.test.ts](test/openInExternalApp.test.ts)
+- [package.json](package.json)
+- [package.nls.json](package.nls.json)
+- [README.md](README.md)
+- [docs/ai/DECISIONS.md](docs/ai/DECISIONS.md)
+
+## Open Questions / TODOs
+
+- Still need the user to actually click "Open in Remote App" again post-fix and confirm the
+  terminal now launches promptly with the `gmolden` command against the real remote path.
+- The submenu fix and download-skip fix are both real-world-informed but neither has been
+  reinstalled-and-reclicked by the user yet at the time of this log entry — next session should
+  check.
+- Everything else from Session 010's open questions still stands (icon, Codespaces prefix,
+  Marketplace account setup).
