@@ -109,13 +109,16 @@ Every non-trivial change must update the docs/ai set in the same pass.
   - updating `ARCHITECTURE.md` or `DECISIONS.md` when structure or design choices change
   - updating `CONTRIBUTING_AI.md` or `AGENTS.md` when the working conventions change
 
-## Mandatory Commit Workflow Rule
+## Commit Workflow Rule
 
-After each meaningful update, ask the user whether they want it committed.
+Commit autonomously and often — no need to ask before committing.
 
-- Present the decision with an explicit accept/reject choice.
-- If the user accepts, commit and push the change.
-- If the user rejects, do not commit yet; leave the work ready for the next update unless the user explicitly asks otherwise.
+- Commit as soon as a change is coherent and working, however small; don't batch unrelated work
+  into one big commit waiting for a "big enough" milestone.
+- Split unrelated concerns (docs, roadmap/decisions updates, implementation, tests) into separate
+  commits so history stays easy to review and bisect.
+- Pushing to the remote is still a separate, explicit decision — confirm with the user before
+  pushing unless they've said otherwise.
 
 ## Workflow for AI-Assisted Changes
 

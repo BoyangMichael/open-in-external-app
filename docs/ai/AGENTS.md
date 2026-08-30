@@ -58,11 +58,14 @@ Types of contributions include:
    - Update the relevant docs/ai files in the same change set, not as a later cleanup task.
    - At minimum, add or update the session log and adjust architecture or contributor guidance when the change affects structure, workflow, or decisions.
 
-6. **Ask before committing**
-   - After each meaningful update, pause and ask the user whether they want the change committed.
-   - Present the decision with an explicit accept/reject choice.
-   - If the user accepts, commit and push the change.
-   - If the user rejects, do not commit yet; keep the change staged or unstaged and include it in the next update unless the user asks otherwise.
+6. **Commit autonomously and often**
+   - No need to pause and ask before committing. Commit on the fly whenever you reach a coherent,
+     working change, however small — don't wait to batch work into one big commit.
+   - Split unrelated concerns into separate commits (e.g. a docs-only change, a roadmap update, an
+     implementation change, and its tests can each be their own commit) so history stays easy to
+     review and bisect.
+   - Pushing to the remote is a separate decision from committing locally: confirm with the user
+     before pushing, since it affects shared/visible state, unless they've said otherwise.
 
 ---
 
