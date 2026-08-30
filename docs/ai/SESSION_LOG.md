@@ -457,3 +457,77 @@ Resolve the `ApplicationLauncher`/`utils/open.ts` test-coverage question left op
 - GitHub Codespaces authority prefix still unconfirmed (carried over from Session 007).
 - Milestone 8 (Upstream Collaboration) and the rest of Milestone 5 (remote application execution,
   SSH host overrides) remain untouched — next candidates once Milestone 7 closes.
+
+---
+
+# Session 009
+
+**Date:** 2026-08-30
+
+## Objective
+
+Get the user's direction on Milestones 5/7/8, implement the resulting Milestone 5b (local vs.
+remote app choice), and answer the "how do I install and test this" question.
+
+## Summary
+
+- Recorded user direction: Milestone 7 is a personal build for now (no manifest/branding work
+  yet); Milestone 8 is "publish my own separate Marketplace listing," not an upstream PR; Milestone
+  5's remote-app placeholder became a concrete spec (local app / remote app / shortcuts as three
+  right-click options).
+- Asked two scoping questions before building Milestone 5b (remote GUI display assumption, app
+  auto-detection) rather than guessing on a feature this size — user confirmed: assume the user's
+  own X11 forwarding is already set up (extension doesn't manage display), and config-only app
+  discovery (no auto-detection) for this version.
+- While researching how remote execution would even work, found a real, previously-latent bug:
+  `package.json` had no `extensionKind` declared, so VS Code would infer this extension as a
+  Workspace extension — meaning under Remote-SSH its host (and therefore every "open with local
+  app" `child_process.exec`/`open`/`vscode.env.openExternal` call) would run on the **remote**
+  machine, not the user's local one, undermining Milestone 3's entire "download remote file, open
+  with local app" flow. Fixed with `extensionKind: ["ui"]`. Not yet confirmed against a real
+  Remote-SSH session, but too risky to leave latent. See `DECISIONS.md` §11.
+- Implemented Milestone 5b: `location: 'local' | 'remote'` field on app config entries (default
+  `'local'`, fully backward compatible), a new `openInExternalApp.openRemote` command/menu entry,
+  and `RemoteApplicationLauncher` which launches a remote app's `shellCommand` via
+  `vscode.window.createTerminal` + `sendText` — a terminal in a Remote-SSH workspace executes on
+  the remote host regardless of which side the requesting extension runs on, which is exactly the
+  cross-boundary primitive needed once the extension itself is forced local (§11). Variable
+  substitution reuses `parseVariables`' `fsPathOverride`/`useWindowsPath` mechanism (the same one
+  built for WSL) against the file's actual remote path, not the local cache.
+- Deliberately deferred (recorded in `DECISIONS.md` §12, not silently dropped): app
+  auto-detection, per-app shortcut ids (the existing `configItemId` mechanism already covers the
+  common "one shortcut → one app" case), and per-platform `shellEnv` for remote apps (the local
+  machine's OS has no reliable relationship to the remote host's OS).
+- Committed in 5 logical steps: config schema, `RemoteApplicationLauncher`, wiring into commands,
+  tests, docs — each `tsc -b`/`eslint` clean, and `pnpm package` re-verified working after the full
+  feature landed.
+- Answered the "is installing/testing simple?" question: `code` CLI is available in this sandbox
+  (same VS Code instance Claude Code itself runs in), so `pnpm package` + `code
+--install-extension <vsix>` + reload is the full flow — flagged the risk that the manifest
+  still shares an extension ID with the original upstream `YuTengjing.open-in-external-app`
+  listing, so installing would silently replace a real install of that if the user has it.
+
+## Links
+
+- [package.json](package.json)
+- [src/typings/index.d.ts](src/typings/index.d.ts)
+- [src/config.ts](src/config.ts)
+- [src/launchers/remoteApplicationLauncher.ts](src/launchers/remoteApplicationLauncher.ts)
+- [src/openInExternalApp.ts](src/openInExternalApp.ts)
+- [src/commands/openRemote.ts](src/commands/openRemote.ts)
+- [test/remoteApplicationLauncher.test.ts](test/remoteApplicationLauncher.test.ts)
+- [test/openInExternalApp.test.ts](test/openInExternalApp.test.ts)
+- [README.md](README.md)
+- [docs/ai/ROADMAP.md](docs/ai/ROADMAP.md)
+- [docs/ai/DECISIONS.md](docs/ai/DECISIONS.md)
+
+## Open Questions / TODOs
+
+- Milestone 5b is implemented but **not verified in a real Remote-SSH session** — same sandbox
+  limitation as everything else needing the Electron GUI. This is the top priority to check once
+  the user tries installing the packaged extension.
+- The `extensionKind: ["ui"]` fix also needs real-session confirmation — it's a reasoned fix based
+  on documented VS Code behavior, not an observed-and-reproduced failure.
+- GitHub Codespaces authority prefix still unconfirmed (carried over from Sessions 007-008).
+- Milestone 7/8 manifest rebranding (publisher id, extension name) is deferred until the user is
+  actually ready to publish — not needed for the personal-build phase.
