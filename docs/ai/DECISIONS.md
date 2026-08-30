@@ -304,6 +304,56 @@ approach.
 
 ---
 
+## 12. Milestone 5b Implementation — Local/Remote App Choice
+
+**User-confirmed scope (2026-08-30, resolving the open questions from `ROADMAP.md` Milestone 5b):**
+
+- **Remote GUI display:** assume the user already has their own X11 forwarding (or equivalent)
+  set up. The extension does not manage remote display — it only launches the app on the remote
+  host via `RemoteApplicationLauncher` (§11), same as running the command in a manually-opened
+  remote terminal.
+- **App discovery:** config-only for this version — no auto-detection of installed apps (local or
+  remote). Auto-detection (`.desktop` files, `/Applications`, registry, remote `$PATH` scanning) is
+  real, separate scope, deferred until/unless actually needed.
+
+**Decision:** extend each app entry in `openInExternalApp.openMapper` with an optional
+`location: 'local' | 'remote'` field, defaulting to `'local'` when unset — every existing config
+written before this field existed keeps working identically (verified: `filterAppsByLocation`
+treats a missing `location` as `'local'`, and existing tests/behavior for the `'local'` path are
+unchanged, just routed through the new filter). A new `openInExternalApp.openRemote` command/menu
+entry (mirroring `open`, not `openMultiple`) filters a matched config item's apps down to
+`location: 'remote'` ones and launches through `RemoteApplicationLauncher` instead of `utils/open`
+'s `open()`, using the file's actual remote path (`resolvedFile.originalUri.path`) rather than the
+locally-cached copy. If the target file isn't actually on a remote provider, or no remote app is
+configured for it, the user gets an informational message rather than silent failure or a
+nonsensical local-system-default fallback (there is no sensible "default remote app").
+
+**Rationale:** reusing the existing `openMapper`/`ExtensionConfigItem`/`ExternalAppConfig` schema
+(rather than a parallel `remoteApps` config key) means a single config item can mix local and
+remote variants of the same logical app under one `extensionName`, and all the existing
+lookup/matching machinery (`extensionName`, `configItemId`, `__ALL__` shared config, `*` fallback)
+applies unchanged to both — only the final app-list needed filtering by location.
+
+**Explicitly deferred (not built in this pass):**
+
+- App auto-detection (both local and remote) — per user direction, config-only for now.
+- Per-app shortcut IDs that skip the app picker for one specific app within a multi-app list. The
+  existing `configItemId` keybinding mechanism (`README.md` → "assign keyboard shortcut for
+  specific config item") already covers the common case of "one shortcut → one app" when the
+  target config item has exactly one app for the desired location; a finer-grained per-app id
+  wasn't built since the common case is already served.
+- Per-platform (`{windows, osx, linux}`) `shellEnv` for remote apps — the local machine's OS has no
+  reliable relationship to the remote host's OS, so only a flat `shellEnv` map is honored for
+  remote apps (`extractFlatShellEnv` in `remoteApplicationLauncher.ts`).
+
+**Not yet validated:** everything here is built and unit-tested at the command-construction level
+(`buildRemoteCommand`, `extractFlatShellEnv`, `filterAppsByLocation`), but actually launching a
+remote app via a real `Terminal` in a real Remote-SSH session has not been confirmed — this
+sandbox can't run the Electron GUI needed for that (same limitation noted throughout
+`SESSION_LOG.md`).
+
+---
+
 ## How to Use This Document
 
 When you make a notable design choice:

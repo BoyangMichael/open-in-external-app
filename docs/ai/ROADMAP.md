@@ -167,49 +167,45 @@ test suite. See `DECISIONS.md` §6 for the caching decision this refines.
 
 ---
 
-## Milestone 5b — Local vs. Remote App Choice 🚧 Not Started (scoping)
+## Milestone 5b — Local vs. Remote App Choice ✅ Implemented (unverified end-to-end)
 
 **Why:** User-defined goal (2026-08-30), more concrete than Milestone 5's original "(future) remote
-applications" placeholder. Right-clicking a file should offer:
+applications" placeholder.
 
-1. **Open using local app** — choose from an auto-detected list of installed local apps, or from
-   the user's `openInExternalApp.openMapper` config (existing behavior).
-2. **Open using remote app** — same, but the app is launched **on the remote (SSH) host**, not
-   downloaded/cached locally first.
-3. **User-defined shortcuts** — a configured shortcut that jumps straight to a specific app from
-   either list, skipping the picker (the existing `configItemId` keybinding mechanism already does
-   this for local apps; needs extending to remote apps too).
+**Scope, as confirmed by the user (2026-08-30):**
 
-**Depends on:** `DECISIONS.md` §11 (`extensionKind: ["ui"]`) — the remote-app path needs the
-Terminal API (`vscode.window.createTerminal` + `sendText`, which executes on the remote host
-regardless of which side the extension itself runs on) since the extension host itself is now
-always local. **Not yet validated in a real Remote-SSH session.**
+- Remote GUI display: assume the user's own X11 forwarding (or equivalent) is already set up —
+  the extension only launches the app remotely, it doesn't manage display forwarding.
+- App discovery: config-only for now, no auto-detection (of local or remote apps). See
+  `DECISIONS.md` §12 for the full design record.
 
-**Open design questions (need to be resolved before implementation, not guessed):**
+**Implemented:**
 
-- Remote GUI display: does "open using remote app" assume the user already has their own
-  X11-forwarding (or equivalent) set up so a remote GUI app's window reaches their screen, or
-  should the extension handle/verify that itself? (Leaning: assume user's own setup — implementing
-  X11 forwarding is out of scope for this extension.)
-- App auto-detection: how should "auto-detected list of available apps" actually be populated —
-  per-OS heuristics (`.desktop` files on Linux, `/Applications` on macOS, Start Menu/registry on
-  Windows) for local; and for remote, presumably scanning the remote `$PATH` and/or a similar
-  remote-OS heuristic via a Terminal/shell command? This is a meaningfully different feature from
-  everything built so far (all prior work assumed explicit user configuration, never auto-discovery).
-- UI shape: a two-level `vscode.window.showQuickPick` (pick local/remote, then pick app) vs. two
-  separate context-menu commands (`Open using Local App` / `Open using Remote App`) vs. one
-  flattened picker showing all options — affects both `package.json` `contributes.menus` and the
-  command-handler structure in `src/commands/`.
-- Config schema: how do remote app entries differ from local ones in `openInExternalApp.openMapper`
-  (a new `location: 'local' | 'remote'` field per app? a separate `remoteApps` config key?) — and
-  how do per-remote-host overrides fit in (an app installed on host A might not exist on host B).
+1. **Open using local app** — unchanged existing behavior (`openInExternalApp.open`).
+2. **Open using remote app** — new `openInExternalApp.openRemote` command/context-menu entry.
+   Filters a matched config item's apps to `location: 'remote'` ones and launches via the new
+   `RemoteApplicationLauncher` (`vscode.window.createTerminal` + `sendText`, per `DECISIONS.md`
+   §11's finding), against the file's actual remote path
+   (`resolvedFile.originalUri.path`) rather than a local cache. Depends on
+   `extensionKind: ["ui"]` (§11) so the extension host — and therefore the command dispatch — is
+   guaranteed to run locally even though the launched terminal itself is remote.
+3. **User-defined shortcuts** — reuses the existing `configItemId` keybinding mechanism unchanged
+   (works for both local and remote apps already); a finer-grained per-app shortcut id was scoped
+   out (see `DECISIONS.md` §12 "Explicitly deferred").
 
-**Acceptance criteria (draft, pending the above):**
+`openInExternalApp.openMapper` apps gained an optional `location: 'local' | 'remote'` field
+(default `'local'`) — every config written before this field existed keeps working identically.
 
-- Right-clicking a file shows both local-app and remote-app options.
-- A remote app launches and its output/window reaches the user (however that's meant to work, per
-  the X11 question above).
-- Shortcuts can target either a local or a remote app.
+**Acceptance criteria:**
+
+- Right-clicking a file shows both "Open in External App" (local) and "Open Using Remote App"
+  (remote) menu entries. ✅
+- A remote app launches via a real terminal, using the file's remote path. — implemented and
+  unit-tested at the command-construction level (`buildRemoteCommand`,
+  `filterAppsByLocation`); **actual launch in a real Remote-SSH session is not yet verified** —
+  this sandbox can't run the Electron GUI needed for that.
+- Shortcuts can target either a local or a remote app. ✅ (existing `configItemId` mechanism,
+  unchanged)
 
 ---
 

@@ -291,6 +291,47 @@ However, if you want to open files with **WSL applications** (like `evince`, `xd
 - [#16](https://github.com/tjx666/open-in-external-app/issues/16) - Opening files in Windows applications from WSL
 - [#74](https://github.com/tjx666/open-in-external-app/issues/74) - Opening files in WSL applications from WSL
 
+### How to open a file with an app running on the remote host (Remote-SSH/WSL/Dev Containers)?
+
+By default apps run **locally** - the file is downloaded/cached locally first (or used as-is if
+it's already local), then opened with a local app. Right-click a file on a remote host and choose
+**"Open Using Remote App"** to instead launch an app **on the remote host itself**, via a VS Code
+integrated terminal. This assumes you already have GUI forwarding (e.g. X11 forwarding) set up if
+the remote app has a window - the extension doesn't manage that.
+
+Mark an app `"location": "remote"` to make it available under "Open Using Remote App" instead of
+"Open in External App". Remote apps only support `shellCommand` (`openCommand`/`isElectronApp` are
+local-machine mechanisms that don't have a remote equivalent), and `${file}`/`${fileBasename}`/etc.
+substitute against the file's path **on the remote host**, not a local cache path:
+
+```jsonc
+{
+  "openInExternalApp.openMapper": [
+    {
+      "extensionName": "xyz",
+      "apps": [
+        {
+          "title": "Avogadro2 (local)",
+          "shellCommand": "avogadro2 ${file}"
+          // location defaults to "local": downloads the remote file to a local
+          // cache first, then opens the cached copy with this local command
+        },
+        {
+          "title": "Avogadro2 (remote)",
+          "shellCommand": "avogadro2 ${file}",
+          "location": "remote"
+          // runs on the remote host instead, against the file's real remote path -
+          // requires avogadro2 to be installed there, and GUI forwarding already set up
+        }
+      ]
+    }
+  ]
+}
+```
+
+If a file isn't actually on a remote host, "Open Using Remote App" shows a message and does
+nothing (there's no local system-default fallback for a remote app, unlike local apps).
+
 ### assign keyboard shortcut for specific config item
 
 `keybindings.json`:
