@@ -284,3 +284,59 @@ address the staleness and error-handling gaps identified in Milestone 3's cachin
 - Sessions 003 and 004's commits (`123da84`, `80874df`) landed after `AGENTS.md`'s doc-sync rule
   existed but this log wasn't updated between commit `cb683f6` and this session — worth keeping an
   eye on so the log doesn't drift from `git log` again.
+
+---
+
+# Session 006
+
+**Date:** 2026-08-30
+
+## Objective
+
+Per user request: change the commit workflow rule to allow autonomous, frequent commits (no more
+asking before each commit); split Session 005's pending changes into separate commits by content;
+close out the last open item from Milestone 3b (cache eviction policy).
+
+## Summary
+
+- Updated `AGENTS.md` and `CONTRIBUTING_AI.md`: replaced "ask before committing" with "commit
+  autonomously and often, split unrelated concerns into separate commits." Pushing to the remote
+  remains a separate, explicit decision requiring confirmation.
+- Committed Session 005's work as 6 separate commits instead of one, grouped by concern: the
+  workflow-rule change, `CLAUDE.md`, the roadmap/decisions planning update, the resolver
+  implementation, the tests, and this log.
+- Closed Milestone 3b's last open item: decided and implemented a cache eviction policy —
+  time-based, opportunistic pruning. `maybePruneRemoteCache()` runs once per extension activation
+  (fire-and-forget from `activate()`), deleting cached files (and `.meta.json` sidecars) whose
+  mtime exceeds `openInExternalApp.cacheMaxAgeDays` (new setting, default 7 days, `0` disables it).
+  Documented the rationale in `DECISIONS.md` §6c (why time-based/opportunistic over a background
+  timer or manual command) and marked Milestone 3b ✅ Completed in `ROADMAP.md`.
+- Extracted `getConfiguredCacheDir()` in `remoteResolver.ts` so `resolve()` and pruning share cache
+  dir resolution instead of duplicating the config lookup.
+- Added tests for `pruneStaleCache`: removes entries past `maxAgeMs` (plus their sidecar), keeps
+  fresh ones, and does nothing when `maxAgeMs` is `0`.
+- Committed this second batch as 3 more commits (decision docs, implementation, tests) — 9 commits
+  total across the session, each `tsc -b`/`eslint`/`prettier --check` clean before committing.
+- Same sandbox limitation as Session 005: could not run the actual `pnpm test` Mocha/Electron
+  suite here; verified via typecheck/lint only.
+
+## Links
+
+- [src/resolvers/remoteResolver.ts](src/resolvers/remoteResolver.ts)
+- [src/extension.ts](src/extension.ts)
+- [package.json](package.json)
+- [package.nls.json](package.nls.json)
+- [test/resolverLauncher.test.ts](test/resolverLauncher.test.ts)
+- [docs/ai/AGENTS.md](docs/ai/AGENTS.md)
+- [docs/ai/CONTRIBUTING_AI.md](docs/ai/CONTRIBUTING_AI.md)
+- [docs/ai/ROADMAP.md](docs/ai/ROADMAP.md)
+- [docs/ai/DECISIONS.md](docs/ai/DECISIONS.md)
+
+## Open Questions / TODOs
+
+- `pnpm test` still needs to run in a real environment to confirm all new tests (Sessions 005 and 006) actually pass — not verified beyond typecheck/lint in either session.
+- Milestone 3b is now fully closed. Size-based cache eviction and a manual "clear cache" command
+  remain explicitly open/deferred (`DECISIONS.md` §6c) if time-based pruning proves insufficient.
+- Next roadmap items are Milestone 5 (config/provider extensibility beyond SSH — WSL/Dev
+  Containers/Codespaces resolvers) and Milestone 6 (CI setup, which would also resolve the
+  can't-run-tests-here limitation by giving the project an environment where they actually run).
