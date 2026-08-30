@@ -19,7 +19,9 @@ export function getRemoteProviderType(uri: Uri): string | undefined {
     const authority = uri.authority.toLowerCase();
     if (authority.startsWith('ssh-remote+')) return 'ssh';
     if (authority.startsWith('wsl+')) return 'wsl';
-    if (authority.startsWith('vscode-remote')) return 'remote';
+    if (authority.startsWith('dev-container+') || authority.startsWith('attached-container+')) {
+        return 'container';
+    }
     return undefined;
 }
 
