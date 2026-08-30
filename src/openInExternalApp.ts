@@ -7,12 +7,11 @@ import { localize } from 'vscode-nls-i18n';
 import getExtensionConfig from './config';
 import { ApplicationLauncher } from './launchers/applicationLauncher';
 import { RemoteApplicationLauncher } from './launchers/remoteApplicationLauncher';
-import { RemoteResolver } from './resolvers/remoteResolver';
+import type { ResolvedFile } from './resolvers/baseResolver';
+import { getRemoteProviderType, RemoteResolver } from './resolvers/remoteResolver';
 import { logger } from './utils/logger';
 import { open } from './utils/open';
 import { getActiveFileUri } from './utils/uri';
-
-const REMOTE_PROVIDER_TYPES = new Set(['ssh', 'wsl', 'container']);
 
 function getFallbackConfigItem(configuration: ExtensionConfigItem[]) {
     return configuration?.find((item) => item.extensionName === '*');
@@ -155,15 +154,26 @@ export default async function openInExternalApp(
     uri ??= vscode.window.activeTextEditor?.document.uri ?? (await getActiveFileUri());
     if (!uri) return;
 
-    const resolvedFile = await resolver.resolve(uri);
-    const filePath = resolvedFile.localPath;
+    let filePath: string;
+    let launchPath: string;
+    let resolvedFile: ResolvedFile | undefined;
 
-    if (location === 'remote' && !REMOTE_PROVIDER_TYPES.has(resolvedFile.providerType)) {
-        vscode.window.showInformationMessage(localize('msg.info.notARemoteFile'));
-        return;
+    if (location === 'remote') {
+        const providerType = getRemoteProviderType(uri);
+        if (!providerType || uri.scheme !== 'vscode-remote') {
+            vscode.window.showInformationMessage(localize('msg.info.notARemoteFile'));
+            return;
+        }
+        // A remote app runs against the file's real path on the remote host - skip
+        // downloading/caching it locally, which is unnecessary work here (and would
+        // silently hang with no progress feedback on a large file).
+        filePath = uri.path;
+        launchPath = uri.path;
+    } else {
+        resolvedFile = await resolver.resolve(uri);
+        filePath = resolvedFile.localPath;
+        launchPath = filePath;
     }
-
-    const launchPath = location === 'remote' ? resolvedFile.originalUri.path : filePath;
 
     // when there is configuration map to it's extension, use [open](https://github.com/sindresorhus/open)
     // except for configured appConfig.isElectronApp option
@@ -191,9 +201,10 @@ export default async function openInExternalApp(
         handled = await openWithConfigItem(launchPath, matchedConfigItem, isMultiple, location);
     } else if (!sharedConfigItem && location === 'local') {
         // Only use system default when there's no matched config and no shared config.
-        // There's no sensible "system default" for a remote app.
+        // There's no sensible "system default" for a remote app. resolvedFile is always
+        // set here: this branch only runs when location === 'local'.
         logger.info('no matched config and no shared config');
-        await launcher.launch(resolvedFile);
+        await launcher.launch(resolvedFile!);
         handled = true;
     } else {
         logger.info('no matched config, but found shared config');
