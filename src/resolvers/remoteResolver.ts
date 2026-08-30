@@ -11,9 +11,22 @@ import { LocalResolver } from './localResolver';
 import { pathExists, readJson } from '../utils/fs';
 import { logger } from '../utils/logger';
 
-const DEFAULT_CACHE_DIR = join(tmpdir(), 'open-in-external-app-cache');
+// Fallback used until setDefaultCacheDir() runs (e.g. in unit tests, which never call
+// activate()). In a real install, activate() overrides this with the extension's
+// dedicated globalStorage directory - see setDefaultCacheDir()'s doc comment for why.
+let defaultCacheDir = join(tmpdir(), 'open-in-external-app-cache');
 const DEFAULT_CACHE_MAX_AGE_DAYS = 7;
 const META_SUFFIX = '.meta.json';
+
+/**
+ * Sets the fallback cache directory used when openInExternalApp.cacheDir is unset.
+ * Called once from activate() with the extension's globalStorage directory, which -
+ * unlike the OS temp folder - is guaranteed exclusive to this extension and isn't
+ * subject to unpredictable OS-level cleanup (which would defeat the point of caching).
+ */
+export function setDefaultCacheDir(dir: string): void {
+    defaultCacheDir = dir;
+}
 
 export function getRemoteProviderType(uri: Uri): string | undefined {
     const authority = uri.authority.toLowerCase();
@@ -32,8 +45,8 @@ export function getConfiguredCacheDir(): string {
     // package.json. Guard here too in case a user explicitly clears the setting.
     const configured = vscode.workspace
         .getConfiguration()
-        .get<string>('openInExternalApp.cacheDir', DEFAULT_CACHE_DIR);
-    return configured || DEFAULT_CACHE_DIR;
+        .get<string>('openInExternalApp.cacheDir', defaultCacheDir);
+    return configured || defaultCacheDir;
 }
 
 interface CacheMeta {
@@ -106,6 +119,7 @@ export class RemoteResolver implements FileResolver {
         }
 
         const cacheDir = getConfiguredCacheDir();
+        logger.info(`using cache directory: ${cacheDir}`);
         const cacheFileName = basename(uri.path) || 'remote-file';
         const safeAuthority = uri.authority.replaceAll(/[^\w.-]/g, '_');
         const cachePath = join(cacheDir, `${safeAuthority}-${cacheFileName}`);
