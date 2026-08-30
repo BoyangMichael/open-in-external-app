@@ -151,7 +151,7 @@ test suite. See `DECISIONS.md` §6 for the caching decision this refines.
 
 ---
 
-## Milestone 6 — Quality and Reliability
+## Milestone 6 — Quality and Reliability 🚧 In Progress
 
 **Goals:**
 
@@ -159,16 +159,25 @@ test suite. See `DECISIONS.md` §6 for the caching decision this refines.
 
 **Tasks:**
 
-- Add logging around URI resolution, downloads, and application launch.
-- Introduce automated tests for resolvers and launcher behavior.
-- Set up CI (build + tests) for the repository.
-- Improve user and contributor documentation.
+- Add logging around URI resolution, downloads, and application launch. ✅ (see
+  `RemoteResolver`/`utils/logger.ts` usage from Milestone 3b)
+- Introduce automated tests for resolvers and launcher behavior. ✅ for `RemoteResolver`
+  (staleness, fallback, pruning); `ApplicationLauncher`/`utils/open.ts` still only has thin
+  coverage (`getLaunchTarget` only).
+- Set up CI (build + tests) for the repository. ✅ already existed (`.github/workflows/ci.yml`,
+  runs `pnpm test` via `xvfb-run` on Linux + native on macOS/Windows) but only triggered on
+  `main` pushes — extended to also trigger on `develop` so work lands with CI feedback instead of
+  only at merge time. This is also the only environment that can currently run the Mocha/Electron
+  suite (`pnpm test` fails to launch VS Code in this sandbox — see `SESSION_LOG.md` sessions
+  005/006).
+- Improve user and contributor documentation. ✅ ongoing via `docs/ai/` and `CLAUDE.md`.
 
 **Acceptance criteria:**
 
-- Core features are covered by tests.
-- CI runs on each commit/PR.
-- Documentation reflects actual behavior and configuration.
+- Core features are covered by tests. — resolver layer done; launcher/`utils/open.ts` still thin.
+- CI runs on each commit/PR. — runs on push to `main`/`develop`; no `pull_request` trigger yet
+  (not needed for a single-maintainer fork without external PRs).
+- Documentation reflects actual behavior and configuration. ✅
 
 ---
 
