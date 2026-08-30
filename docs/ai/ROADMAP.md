@@ -167,6 +167,52 @@ test suite. See `DECISIONS.md` §6 for the caching decision this refines.
 
 ---
 
+## Milestone 5b — Local vs. Remote App Choice 🚧 Not Started (scoping)
+
+**Why:** User-defined goal (2026-08-30), more concrete than Milestone 5's original "(future) remote
+applications" placeholder. Right-clicking a file should offer:
+
+1. **Open using local app** — choose from an auto-detected list of installed local apps, or from
+   the user's `openInExternalApp.openMapper` config (existing behavior).
+2. **Open using remote app** — same, but the app is launched **on the remote (SSH) host**, not
+   downloaded/cached locally first.
+3. **User-defined shortcuts** — a configured shortcut that jumps straight to a specific app from
+   either list, skipping the picker (the existing `configItemId` keybinding mechanism already does
+   this for local apps; needs extending to remote apps too).
+
+**Depends on:** `DECISIONS.md` §11 (`extensionKind: ["ui"]`) — the remote-app path needs the
+Terminal API (`vscode.window.createTerminal` + `sendText`, which executes on the remote host
+regardless of which side the extension itself runs on) since the extension host itself is now
+always local. **Not yet validated in a real Remote-SSH session.**
+
+**Open design questions (need to be resolved before implementation, not guessed):**
+
+- Remote GUI display: does "open using remote app" assume the user already has their own
+  X11-forwarding (or equivalent) set up so a remote GUI app's window reaches their screen, or
+  should the extension handle/verify that itself? (Leaning: assume user's own setup — implementing
+  X11 forwarding is out of scope for this extension.)
+- App auto-detection: how should "auto-detected list of available apps" actually be populated —
+  per-OS heuristics (`.desktop` files on Linux, `/Applications` on macOS, Start Menu/registry on
+  Windows) for local; and for remote, presumably scanning the remote `$PATH` and/or a similar
+  remote-OS heuristic via a Terminal/shell command? This is a meaningfully different feature from
+  everything built so far (all prior work assumed explicit user configuration, never auto-discovery).
+- UI shape: a two-level `vscode.window.showQuickPick` (pick local/remote, then pick app) vs. two
+  separate context-menu commands (`Open using Local App` / `Open using Remote App`) vs. one
+  flattened picker showing all options — affects both `package.json` `contributes.menus` and the
+  command-handler structure in `src/commands/`.
+- Config schema: how do remote app entries differ from local ones in `openInExternalApp.openMapper`
+  (a new `location: 'local' | 'remote'` field per app? a separate `remoteApps` config key?) — and
+  how do per-remote-host overrides fit in (an app installed on host A might not exist on host B).
+
+**Acceptance criteria (draft, pending the above):**
+
+- Right-clicking a file shows both local-app and remote-app options.
+- A remote app launches and its output/window reaches the user (however that's meant to work, per
+  the X11 question above).
+- Shortcuts can target either a local or a remote app.
+
+---
+
 ## Milestone 6 — Quality and Reliability ✅ Completed
 
 **Goals:**
@@ -202,48 +248,66 @@ test suite. See `DECISIONS.md` §6 for the caching decision this refines.
 
 ---
 
-## Milestone 7 — Marketplace Release 🚧 In Progress
+## Milestone 7 — Personal Build Now, Marketplace Later 🚧 In Progress
 
-**Goals:**
-
-- Publish a VSIX and, potentially, a marketplace entry for the fork.
+**User direction (2026-08-30):** right now this is a personal build for the user's own use — no
+rebranding/manifest work needed yet. Eventually (see Milestone 8) they do want to publish it as
+its own listing on the VS Code Marketplace for anyone to install — that's a distinct goal from
+upstreaming (Milestone 8 used to conflate the two; no longer does). Manifest/branding work
+(distinct `publisher`, possibly `name`, since it can't stay under the original author's
+`YuTengjing` publisher — see Milestone 8) is deferred until they're actually ready to publish, not
+done preemptively.
 
 **Tasks:**
 
-- Finalize extension manifest and branding. — not started (still upstream's manifest/branding;
-  fine as-is for personal use, revisit only if actually publishing under a new identity).
-- Prepare release notes describing features and limitations. — not started.
-- Build and test the VSIX package. ✅ `pnpm package` (`vsce package --no-dependencies`) verified
-  working: produces a clean 17-file `.vsix`. Found and fixed a packaging gap along the way —
-  `.vscodeignore` didn't exclude `docs/ai/` or `CLAUDE.md`, so every AI-collaboration process doc
-  was being bundled into the shipped package; excluded now. "Tested" here means packaging succeeds
-  and the file list is correct — actual install-and-use-it-in-Remote-SSH verification still needs a
-  real VS Code environment (this sandbox can't run the Electron GUI — see `SESSION_LOG.md`).
+- Finalize extension manifest and branding. — deferred until publish time (see Milestone 8).
+- Prepare release notes describing features and limitations. — deferred until publish time.
+- Build and test the VSIX package for personal use. ✅ `pnpm package` (`vsce package
+--no-dependencies`) verified working: produces a clean 17-file `.vsix`. Found and fixed a
+  packaging gap along the way — `.vscodeignore` didn't exclude `docs/ai/` or `CLAUDE.md`, so every
+  AI-collaboration process doc was being bundled in; excluded now. "Tested" here means packaging
+  succeeds and the file list is correct — actual install-and-use-it-in-Remote-SSH verification
+  still needs a real VS Code environment (this sandbox can't run the Electron GUI).
 
 **Acceptance criteria:**
 
-- A downloadable VSIX is available. ✅ builds cleanly via `pnpm package`.
+- A downloadable VSIX is available for personal install. ✅ builds cleanly via `pnpm package`.
 - Users can install and use the extension in Remote-SSH and local scenarios. — not yet verified
   end-to-end; needs a real VS Code + Remote-SSH session to confirm.
 
 ---
 
-## Milestone 8 — Upstream Collaboration
+## Milestone 8 — Publish to the Marketplace (Not Upstream)
 
-**Goals:**
+**User direction (2026-08-30):** no upstream PR to `tjx666/open-in-external-app` for now — instead,
+publish this fork as its **own separate** listing on the VS Code Marketplace so anyone can install
+it. This is a different goal from the original "upstream collaboration" framing (kept the milestone
+number; renamed to match).
 
-- Explore contributing the improvements back to the upstream project.
+**Implications carried over from Milestone 7:**
+
+- Needs a distinct `publisher` (can't publish under `YuTengjing`, the original author's publisher
+  id, without their account) and likely a distinct extension `name`/`displayName` to avoid
+  collision/confusion with the original `YuTengjing.open-in-external-app` listing — including the
+  practical risk that installing a same-ID `.vsix` locally would silently overwrite an existing
+  install of the real upstream extension if the user has both. Not done yet — deferred to when
+  they're ready to actually publish (Milestone 7).
+- `package.json` already has `publish:vs-marketplace`/`publish:open-vsx` scripts and
+  `.github/workflows/ci.yml` already has a tag-triggered publish job — both assume the original
+  publisher's marketplace tokens (`VS_MARKETPLACE_TOKEN`/`OPEN_VSX_TOKEN` secrets); will need the
+  user's own tokens once they're ready to publish under their own identity.
 
 **Tasks:**
 
-- Review differences between the fork and upstream.
-- Identify changes that are suitable for an upstream pull request.
-- Prepare a well-documented PR with clear motivation and tests.
+- Decide on a publisher id, extension name, and branding (deferred — see Milestone 7).
+- Set up the user's own VS Marketplace/Open VSX publisher account and tokens.
+- Publish an initial release.
 
 **Acceptance criteria:**
 
-- A serious upstream PR is drafted and discussed.
-- Even if not immediately accepted, the fork remains in a maintainable state.
+- The extension is published under the user's own publisher id and installable by anyone from the
+  VS Code Marketplace (and/or Open VSX).
+- No upstream PR is required or expected for this milestone.
 
 ---
 
