@@ -1,14 +1,14 @@
 {
-    "name": "open-in-external-app",
-    "displayName": "Open in External App",
+    "name": "open-in-external-app-remote",
+    "displayName": "Open in External App (Remote)",
     "version": "0.11.3",
-    "description": "Open file with external application in VSCode",
-    "publisher": "YuTengjing",
+    "description": "Open files with external applications, including apps running on a Remote-SSH/WSL/Dev Container host itself. Fork of tjx666/open-in-external-app.",
+    "publisher": "BoyangMichael",
     "packageManager": "pnpm@8.15.9",
     "author": {
-        "name": "YuTengjing",
-        "url": "https://github.com/tjx666",
-        "email": "ytj2713151713@gmail.com"
+        "name": "Boyang Xu",
+        "url": "https://github.com/BoyangMichael",
+        "email": "boyang.xu@outlook.com"
     },
     "icon": "images/logo.png",
     "license": "SEE LICENSE IN LICENSE",
@@ -19,22 +19,16 @@
         {
             "url": "https://img.shields.io/badge/License-MIT-brightgreen.svg",
             "description": "License: MIT",
-            "href": "https://github.com/tjx666/open-in-external-app/blob/master/LICENSE"
-        },
-        {
-            "url": "https://img.shields.io/badge/PRs-welcome-brightgreen.svg",
-            "description": "PRs Welcome",
-            "href": "https://github.com/tjx666/open-in-external-app"
+            "href": "https://github.com/BoyangMichael/open-in-external-app/blob/develop/LICENSE"
         }
     ],
-    "homepage": "https://github.com/tjx666/open-in-external-app/blob/master/README.md",
+    "homepage": "https://github.com/BoyangMichael/open-in-external-app/blob/develop/README.md",
     "bugs": {
-        "url": "https://github.com/tjx666/open-in-external-app/issues",
-        "email": "ytj2713151713@gmail.com"
+        "url": "https://github.com/BoyangMichael/open-in-external-app/issues"
     },
     "repository": {
         "type": "git",
-        "url": "https://github.com/tjx666/open-in-external-app"
+        "url": "https://github.com/BoyangMichael/open-in-external-app"
     },
     "engines": {
         "vscode": "^1.80.0"
