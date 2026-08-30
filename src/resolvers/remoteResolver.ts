@@ -1,4 +1,4 @@
-import { mkdir, writeFile } from 'node:fs/promises';
+import { mkdir, readdir, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { basename, join } from 'node:path';
 
@@ -12,6 +12,8 @@ import { pathExists, readJson } from '../utils/fs';
 import { logger } from '../utils/logger';
 
 const DEFAULT_CACHE_DIR = join(tmpdir(), 'open-in-external-app-cache');
+const DEFAULT_CACHE_MAX_AGE_DAYS = 7;
+const META_SUFFIX = '.meta.json';
 
 export function getRemoteProviderType(uri: Uri): string | undefined {
     const authority = uri.authority.toLowerCase();
@@ -21,8 +23,56 @@ export function getRemoteProviderType(uri: Uri): string | undefined {
     return undefined;
 }
 
+function getConfiguredCacheDir(): string {
+    return vscode.workspace
+        .getConfiguration()
+        .get<string>('openInExternalApp.cacheDir', DEFAULT_CACHE_DIR);
+}
+
 interface CacheMeta {
     mtime: number;
+}
+
+/**
+ * Deletes cached remote files (and their sidecar metadata) that haven't been refreshed
+ * in longer than maxAgeMs. Best-effort: a failure on one entry doesn't stop the others.
+ */
+export async function pruneStaleCache(cacheDir: string, maxAgeMs: number): Promise<void> {
+    if (maxAgeMs <= 0) return;
+
+    let entries: string[];
+    try {
+        entries = await readdir(cacheDir);
+    } catch {
+        return;
+    }
+
+    const now = Date.now();
+    const cacheFileNames = entries.filter((name) => !name.endsWith(META_SUFFIX));
+
+    await Promise.all(
+        cacheFileNames.map(async (name) => {
+            const filePath = join(cacheDir, name);
+            try {
+                const info = await stat(filePath);
+                if (now - info.mtimeMs > maxAgeMs) {
+                    await rm(filePath, { force: true });
+                    await rm(`${filePath}${META_SUFFIX}`, { force: true });
+                    logger.info(`pruned stale cache entry: ${filePath}`);
+                }
+            } catch (error) {
+                logger.info(`failed to prune cache entry "${filePath}": ${error}`);
+            }
+        }),
+    );
+}
+
+/** Prunes the configured remote cache directory using the configured max age, if any. */
+export async function maybePruneRemoteCache(): Promise<void> {
+    const maxAgeDays = vscode.workspace
+        .getConfiguration()
+        .get<number>('openInExternalApp.cacheMaxAgeDays', DEFAULT_CACHE_MAX_AGE_DAYS);
+    await pruneStaleCache(getConfiguredCacheDir(), maxAgeDays * 24 * 60 * 60 * 1000);
 }
 
 export class RemoteResolver implements FileResolver {
@@ -48,9 +98,7 @@ export class RemoteResolver implements FileResolver {
             };
         }
 
-        const cacheDir = vscode.workspace
-            .getConfiguration()
-            .get<string>('openInExternalApp.cacheDir', DEFAULT_CACHE_DIR);
+        const cacheDir = getConfiguredCacheDir();
 
         await this.ensureCacheDir(cacheDir);
 

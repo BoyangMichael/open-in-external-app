@@ -2,6 +2,7 @@ import vscode from 'vscode';
 import { init } from 'vscode-nls-i18n';
 
 import commands from './commands';
+import { maybePruneRemoteCache } from './resolvers/remoteResolver';
 import { logger } from './utils/logger';
 
 export function activate(context: vscode.ExtensionContext): void {
@@ -12,6 +13,8 @@ export function activate(context: vscode.ExtensionContext): void {
     if (remoteName) {
         logger.info(`active extension in ${remoteName} remote environment`);
     }
+
+    maybePruneRemoteCache().catch((error) => logger.info(`cache pruning failed: ${error}`));
 
     commands.forEach((command) => {
         context.subscriptions.push(

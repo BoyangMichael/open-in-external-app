@@ -9,6 +9,7 @@
     "msg.quickPick.selectApp.placeholder": "Select application to open the file...",
     "msg.quickPick.selectApps.placeholder": "Select multiple applications to open the file...",
 
+    "cfg.openInExternalApp.cacheMaxAgeDays": "Maximum age, in days, to keep a cached remote file on disk before it is automatically pruned. Set to 0 to disable automatic pruning.",
     "cfg.openInExternalApp.openMapper": "Mapper between the file extensionName and application to open it",
     "cfg.openInExternalApp.openMapper.item.id": "Combine with shortcut arg(configItemId) to custom shortcut for specific config item",
     "cfg.openInExternalApp.openMapper.item.extensionName.string": "File extension name，for example: md",

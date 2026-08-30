@@ -129,6 +129,11 @@
                     "type": "string",
                     "default": ""
                 },
+                "openInExternalApp.cacheMaxAgeDays": {
+                    "type": "number",
+                    "default": 7,
+                    "description": "%cfg.openInExternalApp.cacheMaxAgeDays%"
+                },
                 "openInExternalApp.openMapper": {
                     "type": "array",
                     "description": "%cfg.openInExternalApp.openMapper%",
