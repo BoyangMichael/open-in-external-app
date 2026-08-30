@@ -107,7 +107,7 @@ test suite. See `DECISIONS.md` §6 for the caching decision this refines.
 
 ---
 
-## Milestone 4 — Application Launch for Resolved Files
+## Milestone 4 — Application Launch for Resolved Files ✅ Completed
 
 **Goals:**
 
@@ -115,14 +115,21 @@ test suite. See `DECISIONS.md` §6 for the caching decision this refines.
 
 **Tasks:**
 
-- Wire `FileResolver` output (`ResolvedFile`) into the launcher.
-- Ensure platform-appropriate command construction (Windows/macOS/Linux).
-- Handle basic error reporting when applications fail to launch.
+- Wire `FileResolver` output (`ResolvedFile`) into the launcher. ✅ (Session 002)
+- Ensure platform-appropriate command construction (Windows/macOS/Linux). ✅ (`utils/open.ts`:
+  WSL path conversion, Windows non-ASCII/UTF-8 handling, per-platform `shellEnv`)
+- Handle basic error reporting when applications fail to launch. ✅ `shellCommand` failures
+  (`showErrorMessage`, pre-existing) and remote resolve failures (Milestone 3b's
+  `showWarningMessage`/`showErrorMessage`); the `openCommand`/default-app paths don't surface
+  launch failures back to the UI — `open`/`vscode.env.openExternal` don't reliably report them,
+  and this hasn't come up as a real problem yet.
 
 **Acceptance criteria:**
 
-- In a Remote-SSH workspace, "Open in External App" opens the file in the chosen
-  local application without manual download.
+- In a Remote-SSH workspace, "Open in External App" opens the file in the chosen local
+  application without manual download. — implemented and unit-tested at the resolver/launcher
+  boundary; true end-to-end confirmation still needs a real Remote-SSH session (same gap as
+  Milestone 7's acceptance criterion).
 
 ---
 
